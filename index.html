@@ -14,6 +14,8 @@
     --grey:#8A8D93;
     --blood:#C4241C;
     --gold:#C99A2E;
+    --green:#25D366;
+    --blue:#1d4ed8;
   }
   *{margin:0;padding:0;box-sizing:border-box;}
   html{scroll-behavior:smooth;}
@@ -103,6 +105,7 @@
   .btn{
     display:inline-flex;
     align-items:center;
+    justify-content:center;
     gap:.6rem;
     padding:.95rem 1.8rem;
     text-decoration:none;
@@ -110,10 +113,12 @@
     font-weight:700;
     font-size:.92rem;
     transition:transform .2s ease, background .2s ease, color .2s ease;
+    border:none;
+    cursor:pointer;
   }
   .btn-primary{background:var(--blood);color:var(--white);}
   .btn-primary:hover{transform:translateX(-3px);background:#a11d16;}
-  .btn-ghost{border:1px solid #3a3a3d;color:var(--white);}
+  .btn-ghost{border:1px solid #3a3a3d;color:var(--white);background:transparent;}
   .btn-ghost:hover{border-color:var(--white);}
 
   .badge-row{
@@ -198,7 +203,27 @@
   }
   .tee-body{ padding:1.1rem; display:flex; flex-direction:column; flex:1; }
   .tee h3{ font-family:'Cairo',sans-serif; font-weight:700; font-size:1.15rem; color:var(--white); }
+  .tee .price-tag {
+    font-weight: 800;
+    color: var(--gold);
+    font-size: 1.1rem;
+    margin-top: 0.2rem;
+  }
   .tee p{ font-size:.85rem; color:var(--grey); margin-top:.3rem; line-height:1.6; flex:1; }
+  
+  .tee .badge-soldout {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--ink);
+    border: 1px solid var(--blood);
+    color: var(--blood);
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 0.2rem 0.6rem;
+    z-index: 5;
+  }
+
   .order-this{
     position:relative;z-index:1;
     margin-top:.9rem;
@@ -214,6 +239,12 @@
     transition:border-color .2s ease, background .2s ease, color .2s ease;
   }
   .order-this:hover{border-color:var(--blood);background:var(--blood);color:var(--white);}
+  .order-this:disabled {
+    border-color: #2b2b2e;
+    color: var(--grey);
+    cursor: not-allowed;
+    background: transparent;
+  }
 
   .selected-preview{
     display:none;
@@ -228,13 +259,8 @@
   .selected-preview .thumb{
     width:52px;height:52px;flex-shrink:0;
   }
-  .selected-preview .thumb.t1{background:radial-gradient(circle at 30% 20%, #3a1414, #0B0B0C 70%);}
-  .selected-preview .thumb.t2{background:radial-gradient(circle at 70% 25%, #3a2c0f, #0B0B0C 70%);}
-  .selected-preview .thumb.t3{background:radial-gradient(circle at 40% 15%, #142236, #0B0B0C 70%);}
-  .selected-preview .thumb.t4{background:radial-gradient(circle at 60% 20%, #241436, #0B0B0C 70%);}
-  .selected-preview .thumb.t5{background:radial-gradient(circle at 30% 30%, #143221, #0B0B0C 70%);}
-  .selected-preview .thumb.t6{background:radial-gradient(circle at 65% 20%, #351212, #0B0B0C 70%);}
-  .selected-preview .info{font-family:'Inter',sans-serif;}
+  .selected-preview .thumb img{width:100%;height:100%;object-fit:cover;}
+  .selected-preview .info{font-family:'Inter',sans-serif; text-align:right;}
   .selected-preview .info .label{font-size:.68rem;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;}
   .selected-preview .info .name{font-weight:700;color:var(--white);font-size:.95rem;margin-top:.15rem;}
   .selected-preview .clear{
@@ -338,7 +364,7 @@
   .sticky-order{
     position:fixed;
     left:0;right:0;bottom:0;
-    z-index:60;
+    z-index:40;
     background:var(--blood);
     padding:.9rem 1.2rem;
     display:flex;
@@ -357,215 +383,1719 @@
   body{padding-bottom:64px;}
 
   @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} .btn{transition:none;} }
+
+  /* ---------- TOAST NOTIFICATIONS ---------- */
+  .toast-container {
+    position:fixed;
+    top:20px;
+    right:20px;
+    z-index:110;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    max-width:320px;
+    direction: ltr;
+  }
+  .toast {
+    background:var(--panel);
+    border-left:4px solid var(--blood);
+    color:var(--white);
+    padding:12px 16px;
+    border-radius:4px;
+    font-family:'Inter',sans-serif;
+    font-size:.85rem;
+    box-shadow:0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    opacity:0;
+    transform:translateX(50px);
+    transition:all .3s ease;
+  }
+  .toast.show { opacity:1; transform:translateX(0); }
+  .toast.success { border-left-color: var(--green); }
+  .toast.info { border-left-color: var(--blue); }
+  .toast-close { background:none; border:none; color:var(--grey); cursor:pointer; font-size:1.1rem; }
+
+  /* ---------- CONFIRMATION CUSTOM MODAL ---------- */
+  .confirm-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(11,11,12,0.9);
+    backdrop-filter: blur(4px);
+    z-index: 120;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .confirm-modal.active { display: flex; }
+  .confirm-box {
+    background: var(--panel);
+    border: 1px solid var(--blood);
+    padding: 2rem;
+    max-width: 420px;
+    width: 100%;
+    direction: ltr;
+    text-align: left;
+  }
+  .confirm-box h4 {
+    font-family: 'Cairo', sans-serif;
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--white);
+  }
+  .confirm-box p {
+    color: var(--grey);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+  .confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+
+  /* ---------- ADMIN LOGIN SCREEN ---------- */
+  .admin-login-wrapper {
+    min-height: 100vh;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: var(--ink);
+    padding: 1.5rem;
+  }
+  .admin-login-wrapper.active { display: flex; }
+  .admin-login-box {
+    background:var(--panel);
+    border:1px solid #232326;
+    padding:2.5rem;
+    max-width:400px;
+    width:100%;
+    text-align:left;
+    direction:ltr;
+  }
+  .admin-login-box h3 {
+    font-family:'Cairo',sans-serif;
+    font-size:1.5rem;
+    margin-bottom:.5rem;
+    color:var(--white);
+  }
+  .admin-login-box p {
+    color:var(--grey);
+    font-size:.85rem;
+    margin-bottom:1.5rem;
+  }
+
+  /* ---------- ADMIN DASHBOARD PANEL (FULLSCREEN) ---------- */
+  .dashboard-wrapper {
+    position:relative;
+    min-height: 100vh;
+    background:var(--ink);
+    display:none;
+    flex-direction:column;
+    direction:ltr;
+    text-align:left;
+  }
+  .dashboard-wrapper.active { display:flex; }
+  
+  .dash-header {
+    background:var(--panel);
+    border-bottom:1px solid #232326;
+    padding:1rem 2rem;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:1rem;
+  }
+  .dash-title {
+    display:flex;
+    align-items:center;
+    gap:1rem;
+  }
+  .dash-title h2 {
+    font-family:'Cairo',sans-serif;
+    font-size:1.4rem;
+    font-weight:800;
+  }
+  .dash-title h2 span { color:var(--blood); }
+  
+  /* Tabs system */
+  .dash-tabs {
+    display: flex;
+    background: var(--ink);
+    border-bottom: 1px solid #232326;
+    padding: 0 2rem;
+    gap: 1rem;
+  }
+  .dash-tab-btn {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--grey);
+    padding: 1rem 0.5rem;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .dash-tab-btn:hover { color: var(--white); }
+  .dash-tab-btn.active {
+    color: var(--blood);
+    border-bottom-color: var(--blood);
+  }
+
+  .dash-logout {
+    background:transparent;
+    border:1px solid #2b2b2e;
+    color:var(--grey);
+    padding:.5rem 1rem;
+    font-family:'Inter',sans-serif;
+    font-size:.8rem;
+    font-weight:600;
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  .dash-logout:hover { border-color:var(--blood); color:var(--blood); }
+  
+  .dash-body {
+    padding:2rem;
+    max-width:1400px;
+    width:100%;
+    margin:0 auto;
+    display:flex;
+    flex-direction:column;
+    gap:2rem;
+  }
+
+  .dash-section-panel {
+    display: none;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  .dash-section-panel.active {
+    display: flex;
+  }
+
+  /* Stats Grid */
+  .stats-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+    gap:1.2rem;
+  }
+  .stat-card {
+    background:var(--panel);
+    border:1px solid #232326;
+    padding:1.5rem;
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+  }
+  .stat-card .label {
+    font-family:'IBM Plex Mono',monospace;
+    font-size:.7rem;
+    color:var(--grey);
+    text-transform:uppercase;
+    letter-spacing:.05em;
+  }
+  .stat-card .value {
+    font-family:'Inter',sans-serif;
+    font-size:1.8rem;
+    font-weight:800;
+    color:var(--white);
+  }
+  .stat-card .sub {
+    font-size:.75rem;
+    color:var(--grey);
+  }
+
+  /* Split layout: Table & Insights */
+  .dash-main-grid {
+    display:grid;
+    grid-template-columns:1fr 320px;
+    gap:2rem;
+  }
+  @media(max-width:1100px){.dash-main-grid{grid-template-columns:1fr;}}
+
+  /* Table Section */
+  .orders-container {
+    background:var(--panel);
+    border:1px solid #232326;
+    display:flex;
+    flex-direction:column;
+  }
+  .table-header-row {
+    padding:1.2rem 1.5rem;
+    border-bottom:1px solid #232326;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:1rem;
+  }
+  .table-header-row h3 {
+    font-family:'Cairo',sans-serif;
+    font-size:1.15rem;
+  }
+  .filters {
+    display:flex;
+    gap:.5rem;
+    flex-wrap:wrap;
+  }
+  .filter-btn {
+    background:var(--ink);
+    border:1px solid #232326;
+    color:var(--grey);
+    padding:.4rem .8rem;
+    font-size:.75rem;
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    border-color:var(--blood);
+    color:var(--white);
+    background:rgba(196,36,28,.1);
+  }
+
+  .table-scroll {
+    overflow-x:auto;
+    width:100%;
+  }
+  table.orders-table {
+    width:100%;
+    border-collapse:collapse;
+    font-family:'Inter',sans-serif;
+    font-size:.85rem;
+    text-align:left;
+  }
+  table.orders-table th {
+    background:rgba(11,11,12,.5);
+    padding:1rem 1.2rem;
+    color:var(--grey);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:.68rem;
+    text-transform:uppercase;
+    border-bottom:1px solid #232326;
+  }
+  table.orders-table td {
+    padding:1rem 1.2rem;
+    border-bottom:1px solid #232326;
+    vertical-align:middle;
+  }
+  table.orders-table tr:hover td {
+    background:rgba(255,255,255,.02);
+  }
+  
+  /* Status Badges */
+  .badge-status {
+    display:inline-block;
+    padding:.2rem .5rem;
+    font-size:.7rem;
+    font-weight:700;
+    text-transform:uppercase;
+  }
+  .badge-status.pending { background:rgba(201,154,46,.15); color:var(--gold); }
+  .badge-status.confirmed { background:rgba(29,78,216,.15); color:#60a5fa; }
+  .badge-status.shipped { background:rgba(196,36,28,.15); color:var(--blood); }
+  .badge-status.delivered { background:rgba(37,211,102,.15); color:var(--green); }
+  .badge-status.cancelled { background:rgba(138,141,147,.15); color:var(--grey); }
+
+  /* Dropdown updates */
+  .status-select {
+    background:var(--ink);
+    border:1px solid #2b2b2e;
+    color:var(--white);
+    padding:.25rem .5rem;
+    font-size:.75rem;
+    outline:none;
+    cursor:pointer;
+  }
+  .status-select:focus { border-color:var(--blood); }
+
+  .actions-col {
+    display:flex;
+    gap:.5rem;
+  }
+  .btn-action {
+    background:none;
+    border:1px solid #2b2b2e;
+    color:var(--grey);
+    padding:.25rem .5rem;
+    font-size:.7rem;
+    cursor:pointer;
+    transition:all .2s ease;
+  }
+  .btn-action:hover {
+    border-color:var(--blood);
+    color:var(--white);
+    background:var(--blood);
+  }
+  .btn-action.wa-btn {
+    border-color:var(--green);
+    color:var(--green);
+  }
+  .btn-action.wa-btn:hover {
+    background:var(--green);
+    color:var(--ink);
+  }
+
+  /* Admin Sidebar settings */
+  .insights-sidebar {
+    display:flex;
+    flex-direction:column;
+    gap:1.5rem;
+  }
+  .insight-card {
+    background:var(--panel);
+    border:1px solid #232326;
+    padding:1.5rem;
+  }
+  .insight-card h4 {
+    font-family:'Cairo',sans-serif;
+    font-size:1rem;
+    margin-bottom:1rem;
+    border-bottom:1px solid #232326;
+    padding-bottom:.5rem;
+  }
+  .rank-item {
+    display:flex;
+    justify-content:space-between;
+    font-size:.8rem;
+    margin-bottom:.8rem;
+    font-family:'Inter',sans-serif;
+  }
+  .rank-item .name { color:var(--white); }
+  .rank-item .count { color:var(--gold); font-weight:700; }
+
+  /* Change Password Panel */
+  .pwd-input-group {
+    display:flex;
+    flex-direction:column;
+    gap:.5rem;
+    margin-bottom:1rem;
+  }
+  .pwd-input-group label {
+    font-size:.65rem;
+    color:var(--grey);
+    text-transform:uppercase;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .pwd-input-group input, .pwd-input-group select, .pwd-input-group textarea {
+    background:var(--ink);
+    border:1px solid #2b2b2e;
+    color:var(--white);
+    padding:.7rem;
+    font-size:.85rem;
+    outline:none;
+  }
+  .pwd-input-group input:focus, .pwd-input-group select:focus, .pwd-input-group textarea:focus { border-color:var(--blood); }
+
+  /* Dynamic Products Manager Styles */
+  .manager-grid {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+  @media(max-width: 900px) {
+    .manager-grid { grid-template-columns: 1fr; }
+  }
+
+  .manager-form-container {
+    background: var(--panel);
+    border: 1px solid #232326;
+    padding: 1.5rem;
+  }
+  .manager-form-container h3 {
+    font-family: 'Cairo', sans-serif;
+    font-size: 1.15rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .manager-list-container {
+    background: var(--panel);
+    border: 1px solid #232326;
+    padding: 1.5rem;
+  }
+  .manager-list-container h3 {
+    font-family: 'Cairo', sans-serif;
+    font-size: 1.15rem;
+    margin-bottom: 1.5rem;
+  }
+  .product-row-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid #232326;
+    padding: 1rem 0;
+  }
+  .product-row-item:last-child {
+    border-bottom: none;
+  }
+  .product-row-item img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    background: #1a1a1c;
+  }
+  .product-row-item .info {
+    flex: 1;
+  }
+  .product-row-item .info h4 {
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.95rem;
+    color: var(--white);
+  }
+  .product-row-item .info .desc {
+    font-size: 0.75rem;
+    color: var(--grey);
+    margin-top: 0.15rem;
+  }
+  .product-row-item .info .price {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-top: 0.25rem;
+  }
+  .product-row-item .status-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.4rem;
+  }
+  .product-row-item .status-badge.available {
+    background: rgba(37,211,102,.15);
+    color: var(--green);
+  }
+  .product-row-item .status-badge.soldout {
+    background: rgba(196,36,28,.15);
+    color: var(--blood);
+  }
+
+  /* General storefront container view */
+  #storefront-view {
+    display: block;
+  }
 </style>
 </head>
 <body>
 
-<nav>
-  <div class="logo" style="direction:ltr;unicode-bidi:isolate;">My <span>Moda</span> Batna</div>
-  <ul class="nav-links">
-    <li><a href="#collection" class="jump">المجموعة</a></li>
-    <li><a href="#order" class="jump">اطلب الآن</a></li>
-    <li><a href="#store" class="jump">زورونا</a></li>
-    <li><a href="https://www.instagram.com/mymodabatna" target="_blank" rel="noopener" class="nav-cta">إنستغرام</a></li>
-  </ul>
-</nav>
+<!-- VISITOR STOREFRONT VIEW CONTAINER -->
+<div id="storefront-view">
+  <nav>
+    <div class="logo" style="direction:ltr;unicode-bidi:isolate;">My <span>Moda</span> Batna</div>
+    <ul class="nav-links">
+      <li><a href="#collection" class="jump">المجموعة</a></li>
+      <li><a href="#order" class="jump">اطلب الآن</a></li>
+      <li><a href="#store" class="jump">زورونا</a></li>
+      <li><a href="https://www.instagram.com/mymodabatna" target="_blank" rel="noopener" class="nav-cta">إنستغرام</a></li>
+    </ul>
+  </nav>
 
-<section class="hero">
-  <div class="eyebrow">Batna, Algérie — Boutique de vêtements</div>
-  <h1 style="margin-top:1rem;">تيشيرتات <span class="rip">أنمي</span><br>وستريتوير حصرية</h1>
-  <p class="hero-sub">
-    أول وجهة في باتنة لتيشيرتات الأنمي والستريتوير — قطع مستوردة حصرية وجودة عالمية.
-  </p>
-  <div class="hero-ctas">
-    <a href="#collection" class="btn btn-primary jump">شاهد المجموعة ←</a>
-    <a href="#order" class="btn btn-ghost jump">اطلب الآن</a>
-  </div>
-  <div class="badge-row">
-    <div><strong>1,645+</strong>posts</div>
-    <div><strong>763</strong>followers</div>
-    <div><strong>27.4K</strong>vues / 30j</div>
-  </div>
-</section>
+  <section class="hero">
+    <div class="eyebrow">Batna, Algérie — Boutique de vêtements</div>
+    <h1 style="margin-top:1rem;">تيشيرتات <span class="rip">أنمي</span><br>وستريتوير حصرية</h1>
+    <p class="hero-sub">
+      أول وجهة في باتنة لتيشيرتات الأنمي والستريتوير — قطع مستوردة حصرية وجودة عالمية.
+    </p>
+    <div class="hero-ctas">
+      <a href="#collection" class="btn btn-primary jump">شاهد المجموعة ←</a>
+      <a href="#order" class="btn btn-ghost jump">اطلب الآن</a>
+    </div>
+    <div class="badge-row">
+      <div><strong>1,645+</strong>posts</div>
+      <div><strong>763</strong>followers</div>
+      <div><strong>27.4K</strong>vues / 30j</div>
+    </div>
+  </section>
 
-<div class="marquee">
-  <div class="marquee-track">
-    <span class="hl">إصدارات حصرية</span><span>تصاميم أنمي</span><span class="hl">ستريتوير</span><span>محل باتنة</span><span class="hl">إصدارات حصرية</span><span>تصاميم أنمي</span><span class="hl">ستريتوير</span><span>محل باتنة</span>
+  <div class="marquee">
+    <div class="marquee-track">
+      <span class="hl">إصدارات حصرية</span><span>تصاميم أنمي</span><span class="hl">ستريتوير</span><span>محل باتنة</span><span class="hl">إصدارات حصرية</span><span>تصاميم أنمي</span><span class="hl">ستريتوير</span><span>محل باتنة</span>
+    </div>
+  </div>
+
+  <section id="collection">
+    <div class="section-head">
+      <h2>على الرف</h2>
+      <div class="eyebrow">Dernières pièces</div>
+    </div>
+    <!-- Dynamically loaded wall of tees from Firestore -->
+    <div class="wall" id="collection-wall">
+      <div style="grid-column: 1/-1; text-align: center; color: var(--grey); padding: 3rem;">
+        جاري تحميل مجموعة الملابس الحصرية من قاعدة البيانات...
+      </div>
+    </div>
+  </section>
+
+  <section class="manifesto">
+    <div class="manifesto-inner" data-reveal>
+      <div class="eyebrow">فلسفتنا</div>
+      <p>ما نعاودوش نستوردو نفس التصميم مرتين. كل تيشيرت عندنا هو <em>قطعة</em>، ماشي مجرد بضاعة — نختاروها، نستوردوها، ومن بعد توالي.</p>
+      <div class="strip">
+        <div>
+          <div class="num">01</div>
+          <h4>قطع مستوردة حصرية</h4>
+          <p>كمية محدودة من كل تصميم مستورد — لي طار طار.</p>
+        </div>
+        <div>
+          <div class="num">02</div>
+          <h4>جودة عالمية</h4>
+          <p>قطن ثقيل وطباعة متينة تتحمل الاستعمال اليومي.</p>
+        </div>
+        <div>
+          <div class="num">03</div>
+          <h4>أنمي وستريتوير</h4>
+          <p>خط مخصص لتصاميم الأنمي بجانب الجماجم والنسور والستريتوير.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="order" class="order">
+    <div class="order-wrap">
+      <div class="order-intro" data-reveal>
+        <div class="eyebrow" style="margin-bottom:.8rem;">اطلب مباشرة</div>
+        <h2>عجبتك واحدة؟<br><span>ابعثلنا الطلب.</span></h2>
+        <p>عمر الاستمارة بالمعلومات، ونتصلو بيك على واتساب باش نأكدو المقاس والسعر والتوصيل.</p>
+        <ul class="order-steps">
+          <li><span class="n">01</span> قولنا التيشيرت والمقاس</li>
+          <li><span class="n">02</span> نأكدولك التوفر والسعر على واتساب</li>
+          <li><span class="n">03</span> الدفع عند الاستلام أو في المحل</li>
+        </ul>
+      </div>
+
+      <form class="order-form" id="orderForm" data-reveal>
+        <div class="form-title">Bon de commande<small>Merci de remplir le formulaire en français</small></div>
+
+        <div class="selected-preview" id="selectedPreview">
+          <div class="thumb" id="selectedThumb"></div>
+          <div class="info">
+            <div class="label">Article sélectionné</div>
+            <div class="name" id="selectedName"></div>
+          </div>
+          <button type="button" class="clear" id="clearSelected">Retirer</button>
+        </div>
+
+        <div class="field">
+          <label for="o-name">Nom et prénom</label>
+          <input type="text" id="o-name" required placeholder="Votre nom complet">
+        </div>
+        <div class="field">
+          <label for="o-phone">Numéro de téléphone</label>
+          <input type="tel" id="o-phone" required placeholder="0X XX XX XX XX">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="o-wilaya">Wilaya</label>
+            <select id="o-wilaya" required>
+              <option value="">Choisir la wilaya</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="o-delivery">Mode de livraison</label>
+            <select id="o-delivery" required>
+              <option value="">Choisir</option>
+              <option value="stopdesk">استلام من المكتب — Desk</option>
+              <option value="domicile">توصيل للمنزل — Home</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="communeBox" style="display:none;">
+          <label for="o-commune">البلدية — Commune</label>
+          <select id="o-commune">
+            <option value="">اختر البلدية</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="o-address">Adresse complète</label>
+          <input type="text" id="o-address" required placeholder="Quartier, rue...">
+        </div>
+        <div class="field" id="deliveryPriceBox" style="display:none;">
+          <label>سعر التوصيل</label>
+          <div id="deliveryPriceText" style="color:#25D366;font-weight:700;font-size:1rem;"></div>
+        </div>
+        <div class="field">
+          <label for="o-item">Article / nom du modèle</label>
+          <input type="text" id="o-item" required placeholder="ex. T-shirt Skull & Crown">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="o-size">Taille</label>
+            <select id="o-size" required>
+              <option value="">Choisir une taille</option>
+              <option>S</option>
+              <option>M</option>
+              <option>L</option>
+              <option>XL</option>
+              <option>XXL</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="o-qty">Quantité</label>
+            <input type="number" id="o-qty" min="1" value="1" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="o-notes">Remarques (optionnel)</label>
+          <textarea id="o-notes" placeholder="Couleur préférée, adresse de livraison, autre..."></textarea>
+        </div>
+        <button type="submit" class="order-submit">Envoyer la commande sur WhatsApp →</button>
+        <div class="order-note">Ouvre WhatsApp avec votre commande déjà rédigée — rien n'est envoyé automatiquement.</div>
+      </form>
+    </div>
+  </section>
+
+  <section id="store" class="location">
+    <div data-reveal>
+      <div class="eyebrow" style="margin-bottom:.8rem;">زورونا في المحل</div>
+      <h2>شوفها بعينيك<br>في المحل.</h2>
+      <p>الصور ما تعطيش حق التصميم. تعالو جربوها في محلنا بباتنة — قطع جديدة توصل بصفة منتظمة.</p>
+      <div class="link-row">
+        <a href="https://www.instagram.com/mymodabatna" target="_blank" rel="noopener" class="link-card">إنستغرام ←</a>
+        <a href="https://www.facebook.com/SpecialModa1" target="_blank" rel="noopener" class="link-card">فيسبوك ←</a>
+      </div>
+    </div>
+    <div class="map-card" data-reveal>
+      <div class="map-pin">
+        <div class="dot"></div>
+        <span>باتنة، الجزائر</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="contact">
+    <h2>بضاعة مستوردة<br><span>نوعية ممتازة.</span></h2>
+    <div class="link-row">
+      <a href="https://www.instagram.com/mymodabatna" target="_blank" rel="noopener" class="link-card">@mymodabatna</a>
+      <a href="https://linktr.ee/mymodabatna" target="_blank" rel="noopener" class="link-card">جميع الروابط</a>
+      <a href="https://www.facebook.com/SpecialModa1" target="_blank" rel="noopener" class="link-card">صفحة فيسبوك</a>
+      <a href="https://vt.tiktok.com/ZSC4gVxrw/" target="_blank" rel="noopener" class="link-card">تيك توك</a>
+    </div>
+  </section>
+
+  <footer>
+    <span>MY MODA BATNA © 2026</span>
+    <span>Batna, Algérie</span>
+  </footer>
+
+  <a href="#order" class="sticky-order jump" id="stickyOrder">اطلب الآن — Order Now</a>
+</div>
+
+
+<!-- SECRET ADMIN LOGIN WRAPPER -->
+<div class="admin-login-wrapper" id="adminLoginWrapper">
+  <div class="admin-login-box">
+    <h3>دخول المشرف — Admin</h3>
+    <p>يرجى إدخال كلمة المرور السرية لفتح لوحة التحكم.</p>
+    <form id="adminLoginForm">
+      <div class="pwd-input-group">
+        <label for="adminPassword">كلمة المرور — Password</label>
+        <input type="password" id="adminPassword" required placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; font-family:'Cairo';">تسجيل الدخول</button>
+      <button type="button" class="btn btn-ghost" id="backToStoreBtn" style="width:100%; margin-top:0.5rem; font-family:'Cairo';">العودة للمتجر</button>
+    </form>
   </div>
 </div>
 
-<section id="collection">
-  <div class="section-head">
-    <h2>على الرف</h2>
-    <div class="eyebrow">Dernières pièces</div>
-  </div>
-  <div class="wall">
-    <div class="tee" data-reveal data-name="تيشيرت 2Pac Thug Life" data-img="p_p1" data-photourl="https://mymodabatna-rgb.github.io/mymodabatna/assets/p1.jpg"><img src="assets/p1.jpg" alt="2PAC Thug Life" loading="lazy"><div class="tee-body"><h3>تيشيرت 2Pac Thug Life</h3><p>طبعة كلاسيكية بيضاء، من أشهر التصاميم راب.</p><button type="button" class="order-this">اطلب هذا →</button></div></div>
-    <div class="tee" data-reveal data-name="طبعة دالاس فينتاج" data-img="p_p2" data-photourl="https://mymodabatna-rgb.github.io/mymodabatna/assets/p2.jpg"><img src="assets/p2.jpg" alt="Dallas Vintage" loading="lazy"><div class="tee-body"><h3>طبعة دالاس فينتاج</h3><p>تصميم ريترو بستايل الصحف القديمة والحصان البري.</p><button type="button" class="order-this">اطلب هذا →</button></div></div>
-    <div class="tee" data-reveal data-name="طبعة Killswitch Engage" data-img="p_p3" data-photourl="https://mymodabatna-rgb.github.io/mymodabatna/assets/p3.jpg"><img src="assets/p3.jpg" alt="Killswitch Engage" loading="lazy"><div class="tee-body"><h3>طبعة Killswitch Engage</h3><p>جمجمة عسكرية بألوان حمراء نارية، ستايل ميتال.</p><button type="button" class="order-this">اطلب هذا →</button></div></div>
-    <div class="tee" data-reveal data-name="طبعة Disaster الملكية" data-img="p_p4" data-photourl="https://mymodabatna-rgb.github.io/mymodabatna/assets/p4.jpg"><img src="assets/p4.jpg" alt="Disaster - Seek The Truth" loading="lazy"><div class="tee-body"><h3>طبعة Disaster الملكية</h3><p>جمجمة بتاج ذهبي وخط قوطي فاخر.</p><button type="button" class="order-this">اطلب هذا →</button></div></div>
-    <div class="tee" data-reveal data-name="طبعة النسر الأسطوري" data-img="p_p5" data-photourl="https://mymodabatna-rgb.github.io/mymodabatna/assets/p5.jpg"><img src="assets/p5.jpg" alt="Eagle Unleash The Legend" loading="lazy"><div class="tee-body"><h3>طبعة النسر الأسطوري</h3><p>نسر أمريكي بسلاسل مكسورة، ستايل دراجات نارية.</p><button type="button" class="order-this">اطلب هذا →</button></div></div>
-    <div class="tee" data-reveal data-name="طبعة Menteng Dalam" data-img="p_p6" data-photourl="https://mymodabatna-rgb.github.io/mymodabatna/assets/p6.jpg"><img src="assets/p6.jpg" alt="Menteng Dalam" loading="lazy"><div class="tee-body"><h3>طبعة Menteng Dalam</h3><p>تصميم كوميدي بألوان حمراء وزرقاء صاخبة.</p><button type="button" class="order-this">اطلب هذا →</button></div></div>
-    <div class="tee" data-reveal data-name="طبعة Doobie Brothers" data-img="p_p7" data-photourl="https://mymodabatna-rgb.github.io/mymodabatna/assets/p7.jpg"><img src="assets/p7.jpg" alt="Doobie Brothers" loading="lazy"><div class="tee-body"><h3>طبعة Doobie Brothers</h3><p>نسر يحلق فوق الجبال، ستايل روك كلاسيكي.</p><button type="button" class="order-this">اطلب هذا →</button></div></div>
-    <div class="tee" data-reveal data-name="طبعة Skull Society" data-img="p_p8" data-photourl="https://mymodabatna-rgb.github.io/mymodabatna/assets/p8.jpg"><img src="assets/p8.jpg" alt="Skull Society" loading="lazy"><div class="tee-body"><h3>طبعة Skull Society</h3><p>هيكل عظمي على دراجة نارية بألوان ليلية مرعبة.</p><button type="button" class="order-this">اطلب هذا →</button></div></div>
-    <div class="tee" data-reveal data-name="طبعة Snake-D" data-img="p_p9" data-photourl="https://mymodabatna-rgb.github.io/mymodabatna/assets/p9.jpg"><img src="assets/p9.jpg" alt="Snake-D Rocker" loading="lazy"><div class="tee-body"><h3>طبعة Snake-D</h3><p>جمجمة روك بنيران وثعبان وقيثارة، ألوان صاخبة.</p><button type="button" class="order-this">اطلب هذا →</button></div></div>
-  </div>
-</section>
 
-<section class="manifesto">
-  <div class="manifesto-inner" data-reveal>
-    <div class="eyebrow">فلسفتنا</div>
-    <p>ما نعاودوش نستوردو نفس التصميم مرتين. كل تيشيرت عندنا هو <em>قطعة</em>، ماشي مجرد بضاعة — نختاروها، نستوردوها، ومن بعد توالي.</p>
-    <div class="strip">
-      <div>
-        <div class="num">01</div>
-        <h4>قطع مستوردة حصرية</h4>
-        <p>كمية محدودة من كل تصميم مستورد — لي طار طار.</p>
+<!-- SECRET ADMIN DASHBOARD PANEL -->
+<div class="dashboard-wrapper" id="dashboardWrapper">
+  <header class="dash-header">
+    <div class="dash-title">
+      <h2>لوحة إدارة <span>My Moda</span></h2>
+      <span class="eyebrow" style="color:var(--gold)">ADMIN PANEL</span>
+    </div>
+    <div style="display:flex; gap:1rem; align-items:center;">
+      <button class="dash-logout" id="dashLogoutBtn">خروج والعودة للمتجر</button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs inside Admin Dashboard -->
+  <div class="dash-tabs">
+    <button class="dash-tab-btn active" data-tab="orders">الطلبات الواردة (Orders)</button>
+    <button class="dash-tab-btn" data-tab="products">إدارة الملابس (Products)</button>
+    <button class="dash-tab-btn" data-tab="security">الأمان (Security)</button>
+  </div>
+
+  <main class="dash-body">
+    
+    <!-- TAB 1: ORDERS SECTION PANEL -->
+    <div class="dash-section-panel active" id="panel-orders">
+      <!-- Row of stats cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="label">إجمالي الطلبات</span>
+          <div class="value" id="statTotalOrders">0</div>
+          <span class="sub">المسجلة عبر الموقع</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">الأرباح التقديرية</span>
+          <div class="value" id="statRevenue">0 DA</div>
+          <span class="sub">على أساس الملابس المسلمة</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">طلبات قيد الانتظار</span>
+          <div class="value" id="statPending" style="color:var(--gold);">0</div>
+          <span class="sub">بانتظار التأكيد الهاتفي</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">معدل التوصيل الناجح</span>
+          <div class="value" id="statDeliveryRate" style="color:var(--green);">0%</div>
+          <span class="sub">النسبة المئوية للاكتمال</span>
+        </div>
       </div>
-      <div>
-        <div class="num">02</div>
-        <h4>جودة عالمية</h4>
-        <p>قطن ثقيل وطباعة متينة تتحمل الاستعمال اليومي.</p>
-      </div>
-      <div>
-        <div class="num">03</div>
-        <h4>أنمي وستريتوير</h4>
-        <p>خط مخصص لتصاميم الأنمي بجانب الجماجم والنسور والستريتوير.</p>
+
+      <!-- Main Live Grid -->
+      <div class="dash-main-grid">
+        <!-- Table component -->
+        <div class="orders-container">
+          <div class="table-header-row">
+            <h3>سجل الطلبات الواردة</h3>
+            <div class="filters">
+              <button class="filter-btn active" data-filter="all">الكل</button>
+              <button class="filter-btn" data-filter="pending">قيد الانتظار</button>
+              <button class="filter-btn" data-filter="confirmed">مؤكدة</button>
+              <button class="filter-btn" data-filter="shipped">تم الشحن</button>
+              <button class="filter-btn" data-filter="delivered">تم التسليم</button>
+              <button class="filter-btn" data-filter="cancelled">ملغاة</button>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="orders-table">
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>الزبون</th>
+                  <th>الولاية / البلدية</th>
+                  <th>المنتج المطلوب</th>
+                  <th>المقاس والكمية</th>
+                  <th>حالة الطلب</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <tr>
+                  <td colspan="7" style="text-align:center; color:var(--grey); padding:2rem;">
+                    جاري جلب الطلبات من قاعدة البيانات...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right Insights Sidebar -->
+        <div class="insights-sidebar">
+          <div class="insight-card">
+            <h4>الملابس الأكثر مبيعًا</h4>
+            <div id="topProductsContainer">
+              <span class="eyebrow" style="color:var(--grey);">لا توجد بيانات</span>
+            </div>
+          </div>
+
+          <div class="insight-card">
+            <h4>الولايات الأكثر طلبًا</h4>
+            <div id="topWilayasContainer">
+              <span class="eyebrow" style="color:var(--grey);">لا توجد بيانات</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</section>
 
-<section id="order" class="order">
-  <div class="order-wrap">
-    <div class="order-intro" data-reveal>
-      <div class="eyebrow" style="margin-bottom:.8rem;">اطلب مباشرة</div>
-      <h2>عجبتك واحدة؟<br><span>ابعثلنا الطلب.</span></h2>
-      <p>عمر الاستمارة بالمعلومات، ونتصلو بيك على واتساب باش نأكدو المقاس والسعر والتوصيل.</p>
-      <ul class="order-steps">
-        <li><span class="n">01</span> قولنا التيشيرت والمقاس</li>
-        <li><span class="n">02</span> نأكدولك التوفر والسعر على واتساب</li>
-        <li><span class="n">03</span> الدفع عند الاستلام أو في المحل</li>
-      </ul>
+
+    <!-- TAB 2: PRODUCTS MANAGEMENT PANEL -->
+    <div class="dash-section-panel" id="panel-products">
+      <div class="manager-grid">
+        
+        <!-- Form to add new dynamic t-shirt -->
+        <div class="manager-form-container">
+          <h3>إضافة تيشيرت جديد</h3>
+          <form id="addProductForm">
+            <div class="pwd-input-group">
+              <label for="p-name">اسم قطعة الملابس (Product Name)</label>
+              <input type="text" id="p-name" required placeholder="مثال: تيشيرت دالاس فينتاج">
+            </div>
+            <div class="pwd-input-group">
+              <label for="p-price">السعر (Price in DA)</label>
+              <input type="number" id="p-price" required placeholder="2500" min="1">
+            </div>
+            <div class="pwd-input-group">
+              <label for="p-desc">الوصف القصير (Description)</label>
+              <textarea id="p-desc" required placeholder="مثال: طبعة كلاسيكية عالية الجودة قطن 100%"></textarea>
+            </div>
+            <div class="pwd-input-group">
+              <label for="p-img">رابط صورة المنتج (أو اختر صورة افتراضية)</label>
+              <select id="p-img-preset" style="margin-bottom: 0.5rem;">
+                <option value="">رابط صورة مخصص...</option>
+                <option value="assets/p1.jpg">الصورة الافتراضية 1 (2Pac)</option>
+                <option value="assets/p2.jpg">الصورة الافتراضية 2 (Dallas)</option>
+                <option value="assets/p3.jpg">الصورة الافتراضية 3 (Killswitch)</option>
+                <option value="assets/p4.jpg">الصورة الافتراضية 4 (Disaster)</option>
+                <option value="assets/p5.jpg">الصورة الافتراضية 5 (Eagle)</option>
+                <option value="assets/p6.jpg">الصورة الافتراضية 6 (Menteng)</option>
+                <option value="assets/p7.jpg">الصورة الافتراضية 7 (Doobie)</option>
+                <option value="assets/p8.jpg">الصورة الافتراضية 8 (Skull)</option>
+                <option value="assets/p9.jpg">الصورة الافتراضية 9 (Snake-D)</option>
+                <option value="https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500">صورة تيشيرت أسود عام</option>
+                <option value="https://images.unsplash.com/photo-1562157873-818bc0726f68?w=500">صورة تيشيرت أبيض عام</option>
+              </select>
+              <input type="url" id="p-img-custom" placeholder="https://example.com/image.jpg">
+            </div>
+            <div class="pwd-input-group">
+              <label for="p-status">حالة المخزون (Stock)</label>
+              <select id="p-status">
+                <option value="available">متوفر (Available)</option>
+                <option value="sold_out">نفذت الكمية (Sold Out)</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; font-family: 'Cairo'; margin-top: 1rem;">
+              إضافة المنتج للمتجر الآن
+            </button>
+          </form>
+        </div>
+
+        <!-- Real-time dynamic product list -->
+        <div class="manager-list-container">
+          <h3>المنتجات المعروضة في المتجر حاليًا</h3>
+          <div id="managerProductsList">
+            <p style="color:var(--grey)">جاري تحميل قائمة المنتجات...</p>
+          </div>
+        </div>
+
+      </div>
     </div>
 
-    <form class="order-form" id="orderForm" data-reveal>
-      <div class="form-title">Bon de commande<small>Merci de remplir le formulaire en français</small></div>
 
-      <div class="selected-preview" id="selectedPreview">
-        <div class="thumb" id="selectedThumb"></div>
+    <!-- TAB 3: SECURITY SECTION PANEL -->
+    <div class="dash-section-panel" id="panel-security">
+      <div class="insight-card" style="max-width:600px;">
+        <h4>تعديل كلمة مرور المشرف</h4>
+        <p style="font-size:.75rem; color:var(--grey); margin-bottom:1rem; line-height:1.5;">
+          تغيير كلمة المرور الخاصة برابط الدخول السري `#admin`.
+        </p>
+        <form id="changePasswordForm">
+          <div class="pwd-input-group">
+            <label for="newAdminPassword">كلمة المرور الجديدة</label>
+            <input type="password" id="newAdminPassword" required placeholder="أدخل كلمة المرور الجديدة">
+          </div>
+          <button type="submit" class="btn btn-primary" style="font-family:'Cairo'; font-size:.8rem; padding:.5rem 1rem; justify-content:center;">
+            تحديث كلمة المرور
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+
+<!-- Custom Confirmation Modal (Never use alert or confirm) -->
+<div class="confirm-modal" id="customConfirmModal">
+  <div class="confirm-box">
+    <h4 id="confirmTitle">تأكيد الإجراء</h4>
+    <p id="confirmMessage">هل أنت متأكد من رغبتك في حذف هذا العنصر نهائيًا؟</p>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" id="confirmCancelBtn">إلغاء</button>
+      <button class="btn btn-primary" id="confirmYesBtn" style="background:var(--blood)">نعم، حذف</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Toast Notifications UI -->
+<div class="toast-container" id="toastContainer"></div>
+
+
+<!-- Firebase Application Integration & Logic Script -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+  import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+  // Configuration Firebase globale
+  const firebaseConfig = JSON.parse(__firebase_config);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+  // State Management
+  let currentUser = null;
+  let currentPassword = "batna05"; // Default Password
+  let ordersList = [];
+  let productsList = [];
+  let unsubscribeOrders = null;
+  let unsubscribeProducts = null;
+
+  // Global variables to support custom confirmation callback
+  let activeConfirmCallback = null;
+
+  // Toast notifications trigger
+  function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+      <span>${message}</span>
+      <button class="toast-close">&times;</button>
+    `;
+    container.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add('show'), 50);
+
+    const dismissTimeout = setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+
+    toast.querySelector('.toast-close').addEventListener('click', () => {
+      clearTimeout(dismissTimeout);
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    });
+  }
+
+  // Pure custom confirm handler (Avoid alert/confirm)
+  function showConfirmModal(title, message, onConfirm) {
+    const modal = document.getElementById('customConfirmModal');
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    modal.classList.add('active');
+    
+    activeConfirmCallback = onConfirm;
+  }
+
+  document.getElementById('confirmCancelBtn').addEventListener('click', () => {
+    document.getElementById('customConfirmModal').classList.remove('active');
+    activeConfirmCallback = null;
+  });
+
+  document.getElementById('confirmYesBtn').addEventListener('click', () => {
+    if (activeConfirmCallback) {
+      activeConfirmCallback();
+    }
+    document.getElementById('customConfirmModal').classList.remove('active');
+    activeConfirmCallback = null;
+  });
+
+  // --- Auth & Initializing DB ---
+  const initAuth = async () => {
+    try {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    } catch (err) {
+      console.error("Firebase Auth Error:", err);
+      showToast("خطأ في الاتصال بقاعدة البيانات الأمنية.", "info");
+    }
+  };
+
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    if (user) {
+      await loadAdminPassword();
+      // Start listening to the products on storefront and manager right after Auth is ready
+      startRealtimeProductsListener();
+    }
+  });
+
+  // Load secret password from DB
+  async function loadAdminPassword() {
+    if (!currentUser) return;
+    try {
+      const pwdDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
+      const docSnap = await getDoc(pwdDocRef);
+      if (docSnap.exists()) {
+        currentPassword = docSnap.data().password || "batna05";
+      } else {
+        await setDoc(pwdDocRef, { password: "batna05" });
+      }
+    } catch (e) {
+      console.error("Password read error: ", e);
+    }
+  }
+
+  initAuth();
+
+  // --- Dynamic Products Listener & Seed Database helper ---
+  function startRealtimeProductsListener() {
+    if (!currentUser) return;
+    const productsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+
+    unsubscribeProducts = onSnapshot(productsCollectionRef, async (snapshot) => {
+      productsList = [];
+      snapshot.forEach(doc => {
+        productsList.push({ id: doc.id, ...doc.data() });
+      });
+
+      // If database is completely empty (first run), let's seed it with the default 9 t-shirts
+      if (productsList.length === 0) {
+        await seedDefaultProducts();
+        return; // The snapshot listener will trigger again right after seeding
+      }
+
+      // Sort products by creation date locally
+      productsList.sort((a, b) => {
+        const timeA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+        const timeB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+        return timeB - timeA;
+      });
+
+      renderStorefrontWall();
+      renderManagerProductsList();
+    }, (error) => {
+      console.error("Products subscription error:", error);
+      showToast("فشل في تحميل المنتجات من السيرفر.", "info");
+    });
+  }
+
+  // Seeding initial 9 clothes products dynamically
+  async function seedDefaultProducts() {
+    const productsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+    const defaultList = [
+      { name: "تيشيرت 2Pac Thug Life", desc: "طبعة كلاسيكية بيضاء، من أشهر التصاميم راب.", price: 2500, photoUrl: "assets/p1.jpg", status: "available" },
+      { name: "طبعة دالاس فينتاج", desc: "تصميم ريترو بستايل الصحف القديمة والحصان البري.", price: 2500, photoUrl: "assets/p2.jpg", status: "available" },
+      { name: "طبعة Killswitch Engage", desc: "جمجمة عسكرية بألوان حمراء نارية، ستايل ميتال.", price: 2500, photoUrl: "assets/p3.jpg", status: "available" },
+      { name: "طبعة Disaster الملكية", desc: "جمجمة بتاج ذهبي وخط قوطي فاخر.", price: 2500, photoUrl: "assets/p4.jpg", status: "available" },
+      { name: "طبعة النسر الأسطوري", desc: "نسر أمريكي بسلاسل مكسورة، ستايل دراجات نارية.", price: 2500, photoUrl: "assets/p5.jpg", status: "available" },
+      { name: "طبعة Menteng Dalam", desc: "تصميم كوميدي بألوان حمراء وزرقاء صاخبة.", price: 2500, photoUrl: "assets/p6.jpg", status: "available" },
+      { name: "طبعة Doobie Brothers", desc: "نسر يحلق فوق الجبال، ستايل روك كلاسيكي.", price: 2500, photoUrl: "assets/p7.jpg", status: "available" },
+      { name: "طبعة Skull Society", desc: "هيكل عظمي على دراجة نارية بألوان ليلية مرعبة.", price: 2500, photoUrl: "assets/p8.jpg", status: "available" },
+      { name: "طبعة Snake-D", desc: "جمجمة روك بنيران وثعبان وقيثارة، ألوان صاخبة.", price: 2500, photoUrl: "assets/p9.jpg", status: "available" }
+    ];
+
+    try {
+      for (const item of defaultList) {
+        await addDoc(productsCollectionRef, {
+          ...item,
+          createdAt: serverTimestamp()
+        });
+      }
+      showToast("تم تهيئة قائمة الملابس الافتراضية بنجاح.", "success");
+    } catch (e) {
+      console.error("Error seeding DB:", e);
+    }
+  }
+
+  // --- Render Storefront dynamic wall ---
+  function renderStorefrontWall() {
+    const wallContainer = document.getElementById('collection-wall');
+    wallContainer.innerHTML = '';
+
+    if (productsList.length === 0) {
+      wallContainer.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; color: var(--grey); padding: 3rem;">
+          لا توجد ملابس معروضة حاليًا في المتجر.
+        </div>
+      `;
+      return;
+    }
+
+    productsList.forEach(product => {
+      const isSoldOut = product.status === 'sold_out';
+      const teeDiv = document.createElement('div');
+      teeDiv.className = 'tee';
+      teeDiv.setAttribute('data-name', product.name);
+      teeDiv.setAttribute('data-photourl', product.photoUrl || '');
+      
+      // Fallback shirt image if broken or local not loaded
+      const imageTagHtml = `<img src="${product.photoUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500'}" alt="${escapeHtml(product.name)}" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500';">`;
+
+      teeDiv.innerHTML = `
+        ${isSoldOut ? '<div class="badge-soldout">نفذت الكمية</div>' : ''}
+        ${imageTagHtml}
+        <div class="tee-body">
+          <h3>${escapeHtml(product.name)}</h3>
+          <div class="price-tag">${product.price ? product.price.toLocaleString() : '2,500'} DA</div>
+          <p>${escapeHtml(product.desc || '')}</p>
+          <button type="button" class="order-this" ${isSoldOut ? 'disabled' : ''}>
+            ${isSoldOut ? 'غير متوفر' : 'اطلب هذا ←'}
+          </button>
+        </div>
+      `;
+
+      // Order click listener inside storefront
+      if (!isSoldOut) {
+        teeDiv.querySelector('.order-this').addEventListener('click', function() {
+          const name = product.name;
+          const imgSrc = product.photoUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500';
+          selectedPhotoUrl = product.photoUrl || '';
+
+          itemInput.value = name;
+          nameEl.textContent = name;
+          thumb.innerHTML = `<img src="${imgSrc}" alt="" style="width:100%;height:100%;object-fit:cover;" onerror="this.src='https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500';">`;
+          preview.classList.add('active');
+
+          document.getElementById('order').scrollIntoView({behavior:'smooth', block:'start'});
+        });
+      }
+
+      wallContainer.appendChild(teeDiv);
+    });
+  }
+
+  // --- Render Manager dynamic products list ---
+  function renderManagerProductsList() {
+    const container = document.getElementById('managerProductsList');
+    container.innerHTML = '';
+
+    if (productsList.length === 0) {
+      container.innerHTML = `<p style="color:var(--grey)">لا توجد ملابس مسجلة حتى الآن.</p>`;
+      return;
+    }
+
+    productsList.forEach(product => {
+      const row = document.createElement('div');
+      row.className = 'product-row-item';
+      
+      const statusText = product.status === 'available' ? 'متوفر' : 'نفذ';
+      const statusClass = product.status === 'available' ? 'available' : 'soldout';
+
+      row.innerHTML = `
+        <img src="${product.photoUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500'}" alt="" onerror="this.src='https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500';">
         <div class="info">
-          <div class="label">Article sélectionné</div>
-          <div class="name" id="selectedName"></div>
+          <h4>${escapeHtml(product.name)}</h4>
+          <div class="desc">${escapeHtml(product.desc || '')}</div>
+          <div class="price">${(product.price || 2500).toLocaleString()} DA</div>
         </div>
-        <button type="button" class="clear" id="clearSelected">Retirer</button>
-      </div>
-
-      <div class="field">
-        <label for="o-name">Nom et prénom</label>
-        <input type="text" id="o-name" required placeholder="Votre nom complet">
-      </div>
-      <div class="field">
-        <label for="o-phone">Numéro de téléphone</label>
-        <input type="tel" id="o-phone" required placeholder="0X XX XX XX XX">
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="o-wilaya">Wilaya</label>
-          <select id="o-wilaya" required>
-            <option value="">Choisir la wilaya</option>
+        <div style="display:flex; flex-direction:column; gap:0.5rem; align-items:flex-end;">
+          <span class="status-badge ${statusClass}">${statusText}</span>
+          <select class="status-select p-status-toggle" data-id="${product.id}" style="padding:0.15rem; font-size:0.75rem;">
+            <option value="available" ${product.status === 'available' ? 'selected' : ''}>تثبيت كمتوفر</option>
+            <option value="sold_out" ${product.status === 'sold_out' ? 'selected' : ''}>تثبيت كمنفذ</option>
           </select>
+          <button class="btn-action p-delete-btn" data-id="${product.id}" style="color:var(--blood); border-color:rgba(196,36,28,.3); font-size:0.75rem; padding:0.1rem 0.3rem;">حذف</button>
         </div>
-        <div class="field">
-          <label for="o-delivery">Mode de livraison</label>
-          <select id="o-delivery" required>
-            <option value="">Choisir</option>
-            <option value="stopdesk">استلام من المكتب — Desk</option>
-            <option value="domicile">توصيل للمنزل — Home</option>
+      `;
+
+      // Status change listener for dynamic product
+      row.querySelector('.p-status-toggle').addEventListener('change', async function() {
+        const prodId = this.getAttribute('data-id');
+        const newStatus = this.value;
+        await updateProductStatus(prodId, newStatus);
+      });
+
+      // Delete listener for dynamic product
+      row.querySelector('.p-delete-btn').addEventListener('click', function() {
+        const prodId = this.getAttribute('data-id');
+        showConfirmModal(
+          "حذف الملابس",
+          `هل أنت متأكد من حذف "${product.name}" نهائيًا من قاعدة بيانات المتجر؟`,
+          async () => {
+            await deleteProduct(prodId);
+          }
+        );
+      });
+
+      container.appendChild(row);
+    });
+  }
+
+  // Update dynamic product status
+  async function updateProductStatus(id, status) {
+    if (!currentUser) return;
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', id);
+      await updateDoc(docRef, { status: status });
+      showToast("تم تحديث حالة المنتج بنجاح.");
+    } catch (e) {
+      console.error(e);
+      showToast("فشل تحديث حالة المنتج.", "info");
+    }
+  }
+
+  // Delete dynamic product
+  async function deleteProduct(id) {
+    if (!currentUser) return;
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', id);
+      await deleteDoc(docRef);
+      showToast("تم حذف المنتج بنجاح من المتجر.");
+    } catch (e) {
+      console.error(e);
+      showToast("فشل في حذف المنتج.", "info");
+    }
+  }
+
+  // Form handling: Add new Dynamic Product
+  const addProductForm = document.getElementById('addProductForm');
+  const pImgPreset = document.getElementById('p-img-preset');
+  const pImgCustom = document.getElementById('p-img-custom');
+
+  pImgPreset.addEventListener('change', function() {
+    if (this.value !== "") {
+      pImgCustom.value = this.value;
+    }
+  });
+
+  addProductForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const name = document.getElementById('p-name').value.trim();
+    const price = parseInt(document.getElementById('p-price').value) || 2500;
+    const desc = document.getElementById('p-desc').value.trim();
+    const photoUrl = pImgCustom.value.trim() || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500';
+    const status = document.getElementById('p-status').value;
+
+    const newProduct = {
+      name,
+      price,
+      desc,
+      photoUrl,
+      status,
+      createdAt: serverTimestamp()
+    };
+
+    try {
+      const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+      await addDoc(collectionRef, newProduct);
+      showToast("تمت إضافة المنتج الجديد وعرضه في المتجر بنجاح !");
+      addProductForm.reset();
+      pImgCustom.value = '';
+    } catch (err) {
+      console.error(err);
+      showToast("حدث خطأ أثناء إضافة المنتج.", "info");
+    }
+  });
+
+  // --- Order Form Submission & Real-time Order save ---
+  const orderForm = document.getElementById('orderForm');
+  orderForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!currentUser) {
+      showToast("قاعدة البيانات غير متصلة بعد، يرجى المحاولة بعد لحظات.", "info");
+      return;
+    }
+
+    const name = document.getElementById('o-name').value.trim();
+    const phone = document.getElementById('o-phone').value.trim();
+    const wilaya = document.getElementById('o-wilaya').value;
+    const method = document.getElementById('o-delivery').value;
+    const methodLabel = method === 'domicile' ? 'توصيل للمنزل' : (method === 'stopdesk' ? 'استلام من المكتب' : '');
+    const address = document.getElementById('o-address').value.trim();
+    const commune = document.getElementById('o-commune') ? document.getElementById('o-commune').value : '';
+    const item = document.getElementById('o-item').value.trim();
+    const size = document.getElementById('o-size').value;
+    const qty = parseInt(document.getElementById('o-qty').value) || 1;
+    const notes = document.getElementById('o-notes').value.trim();
+    const price = wilaya && method ? wilayaPrices[wilaya][method] : undefined;
+    const priceStr = (price === null || price === undefined) ? 'À confirmer' : (price.toLocaleString() + ' DA');
+
+    const orderData = {
+      name,
+      phone,
+      wilaya,
+      commune,
+      deliveryMethod: method,
+      deliveryMethodLabel: methodLabel,
+      address,
+      item,
+      photoUrl: selectedPhotoUrl || '',
+      size,
+      qty,
+      notes,
+      deliveryPrice: price || 0,
+      status: 'pending',
+      createdAt: serverTimestamp()
+    };
+
+    try {
+      const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
+      await addDoc(collectionRef, orderData);
+      
+      showToast("تم تسجيل طلبك بنجاح وقيد المراجعة!");
+
+      let msg = `Nouvelle commande depuis le site My Moda Batna :\n`;
+      msg += `Nom : ${name}\n`;
+      msg += `Téléphone : ${phone}\n`;
+      msg += `Wilaya : ${wilaya}\n`;
+      msg += `Mode de livraison : ${methodLabel}\n`;
+      msg += `Adresse : ${address}\n`;
+      if(commune){ msg += `Commune : ${commune}\n`; }
+      msg += `Frais de livraison : ${priceStr}\n`;
+      msg += `Article : ${item}\n`;
+      if(selectedPhotoUrl){ msg += `Photo : ${selectedPhotoUrl}\n`; }
+      msg += `Taille : ${size}\n`;
+      msg += `Quantité : ${qty}\n`;
+      if(notes){ msg += `Remarques : ${notes}\n`; }
+
+      const storeNumber = "213780252131";
+      const url = `https://wa.me/${storeNumber}?text=${encodeURIComponent(msg)}`;
+      window.open(url, '_blank');
+      
+      orderForm.reset();
+      document.getElementById('clearSelected').click();
+    } catch (err) {
+      console.error(err);
+      showToast("حدث خطأ أثناء إرسال طلبك. يرجى التواصل معنا على واتساب مباشرة.", "info");
+    }
+  });
+
+
+  // --- Unique Hidden Admin Portal Router & Hashes ---
+  const adminLoginWrapper = document.getElementById('adminLoginWrapper');
+  const dashboardWrapper = document.getElementById('dashboardWrapper');
+  const storefrontView = document.getElementById('storefront-view');
+  
+  function handleRouting() {
+    const isSecretAdminRoute = window.location.hash === '#admin';
+    if (isSecretAdminRoute) {
+      // Hide standard storefront
+      storefrontView.style.display = 'none';
+      // If we are logged in, show dashboard. Otherwise, show password input screen.
+      const sessionLoggedIn = sessionStorage.getItem('mymoda_admin_logged') === 'true';
+      if (sessionLoggedIn) {
+        adminLoginWrapper.classList.remove('active');
+        dashboardWrapper.classList.add('active');
+        startRealtimeOrdersListener();
+      } else {
+        dashboardWrapper.classList.remove('active');
+        adminLoginWrapper.classList.add('active');
+        document.getElementById('adminPassword').focus();
+      }
+    } else {
+      // Normal storefront routing
+      adminLoginWrapper.classList.remove('active');
+      dashboardWrapper.classList.remove('active');
+      storefrontView.style.display = 'block';
+      stopRealtimeOrdersListener();
+    }
+  }
+
+  window.addEventListener('hashchange', handleRouting);
+  window.addEventListener('DOMContentLoaded', handleRouting);
+
+  // Back to store from login screen
+  document.getElementById('backToStoreBtn').addEventListener('click', () => {
+    window.location.hash = '';
+  });
+
+  // Login submission
+  const adminLoginForm = document.getElementById('adminLoginForm');
+  adminLoginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const enteredPassword = document.getElementById('adminPassword').value.trim();
+    if (enteredPassword === currentPassword) {
+      showToast("تم تفويض المشرف بنجاح !", "success");
+      sessionStorage.setItem('mymoda_admin_logged', 'true');
+      adminLoginWrapper.classList.remove('active');
+      dashboardWrapper.classList.add('active');
+      startRealtimeOrdersListener();
+    } else {
+      showToast("كلمة المرور غير صحيحة.", "info");
+    }
+  });
+
+  // Dashboard Logout
+  document.getElementById('dashLogoutBtn').addEventListener('click', () => {
+    sessionStorage.removeItem('mymoda_admin_logged');
+    window.location.hash = '';
+  });
+
+  // Dashboard Section Tabs System
+  const tabButtons = document.querySelectorAll('.dash-tab-btn');
+  const sectionPanels = document.querySelectorAll('.dash-section-panel');
+
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      sectionPanels.forEach(p => p.classList.remove('active'));
+
+      this.classList.add('active');
+      const selectedTab = this.getAttribute('data-tab');
+      document.getElementById(`panel-${selectedTab}`).classList.add('active');
+    });
+  });
+
+  // Change Password form
+  const changePasswordForm = document.getElementById('changePasswordForm');
+  changePasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPassword = document.getElementById('newAdminPassword').value.trim();
+    if (!newPassword) return;
+
+    try {
+      const pwdDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
+      await setDoc(pwdDocRef, { password: newPassword });
+      currentPassword = newPassword;
+      document.getElementById('newAdminPassword').value = '';
+      showToast("تم تحديث كلمة المرور بنجاح !", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("فشل في تحديث كلمة المرور.", "info");
+    }
+  });
+
+
+  // --- Real-time Live Orders Syncing ---
+  function startRealtimeOrdersListener() {
+    if (!currentUser) return;
+    const ordersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
+    
+    unsubscribeOrders = onSnapshot(ordersCollectionRef, (snapshot) => {
+      ordersList = [];
+      snapshot.forEach(doc => {
+        ordersList.push({ id: doc.id, ...doc.data() });
+      });
+      
+      ordersList.sort((a, b) => {
+        const timeA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+        const timeB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+        return timeB - timeA;
+      });
+
+      renderDashboardOrders();
+    }, (error) => {
+      console.error("Orders flow error:", error);
+    });
+  }
+
+  function stopRealtimeOrdersListener() {
+    if (unsubscribeOrders) {
+      unsubscribeOrders();
+      unsubscribeOrders = null;
+    }
+  }
+
+  // --- Calculations and UI elements inside Dashboard ---
+  let activeFilter = 'all';
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      activeFilter = this.getAttribute('data-filter');
+      renderOrdersTable();
+    });
+  });
+
+  function renderDashboardOrders() {
+    calculateStats();
+    renderOrdersTable();
+    renderInsights();
+  }
+
+  function calculateStats() {
+    const totalOrders = ordersList.length;
+    let pendingCount = 0;
+    let deliveredCount = 0;
+    let estRevenue = 0;
+
+    ordersList.forEach(order => {
+      if (order.status === 'pending') pendingCount++;
+      if (order.status === 'delivered') {
+        deliveredCount++;
+        const shirtPrice = 2500; 
+        const qty = parseInt(order.qty) || 1;
+        const deliveryCost = parseFloat(order.deliveryPrice) || 0;
+        estRevenue += (shirtPrice * qty) + deliveryCost;
+      }
+    });
+
+    const deliveryRate = totalOrders > 0 ? Math.round((deliveredCount / totalOrders) * 100) : 0;
+
+    document.getElementById('statTotalOrders').textContent = totalOrders;
+    document.getElementById('statRevenue').textContent = estRevenue.toLocaleString() + ' DA';
+    document.getElementById('statPending').textContent = pendingCount;
+    document.getElementById('statDeliveryRate').textContent = deliveryRate + '%';
+  }
+
+  function renderOrdersTable() {
+    const tableBody = document.getElementById('ordersTableBody');
+    tableBody.innerHTML = '';
+
+    const filteredOrders = ordersList.filter(order => {
+      if (activeFilter === 'all') return true;
+      return order.status === activeFilter;
+    });
+
+    if (filteredOrders.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="7" style="text-align:center; color:var(--grey); padding:2.5rem;">
+            لا توجد أي طلبات مسجلة ضمن هذه الفئة حاليًا.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    filteredOrders.forEach(order => {
+      const dateFormatted = order.createdAt?.toDate ? order.createdAt.toDate().toLocaleDateString('ar-DZ', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+      }) : 'مؤخرًا';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="color:var(--grey); font-family:'IBM Plex Mono',monospace;">${dateFormatted}</td>
+        <td>
+          <div style="font-weight:700; color:var(--white);">${escapeHtml(order.name)}</div>
+          <div style="font-size:.75rem; color:var(--grey);">${escapeHtml(order.phone)}</div>
+        </td>
+        <td>
+          <div>${escapeHtml(order.wilaya)}</div>
+          <div style="font-size:.75rem; color:var(--grey);">${escapeHtml(order.commune || '—')}</div>
+        </td>
+        <td>
+          <div style="font-weight:600; color:var(--gold);">${escapeHtml(order.item)}</div>
+          <div style="font-size:.72rem; color:var(--grey); max-width: 150px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${escapeHtml(order.notes)}">
+            ${escapeHtml(order.notes || 'لا توجد ملاحظات')}
+          </div>
+        </td>
+        <td>
+          <span style="font-weight:700;">${escapeHtml(order.size)}</span>
+          <span style="color:var(--grey);"> x${order.qty}</span>
+        </td>
+        <td>
+          <select class="status-select o-status-select" data-id="${order.id}">
+            <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>قيد الانتظار</option>
+            <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>مؤكدة</option>
+            <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>تم الشحن</option>
+            <option value="delivered" ${order.status === 'delivered' ? 'selected' : ''}>تم التسليم</option>
+            <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>ملغاة</option>
           </select>
-        </div>
-      </div>
-      <div class="field" id="communeBox" style="display:none;">
-        <label for="o-commune">البلدية — Commune</label>
-        <select id="o-commune">
-          <option value="">اختر البلدية</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="o-address">Adresse complète</label>
-        <input type="text" id="o-address" required placeholder="Quartier, rue...">
-      </div>
-      <div class="field" id="deliveryPriceBox" style="display:none;">
-        <label>سعر التوصيل</label>
-        <div id="deliveryPriceText" style="color:#25D366;font-weight:700;font-size:1rem;"></div>
-      </div>
-      <div class="field">
-        <label for="o-item">Article / nom du modèle</label>
-        <input type="text" id="o-item" required placeholder="ex. T-shirt Skull & Crown">
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="o-size">Taille</label>
-          <select id="o-size" required>
-            <option value="">Choisir une taille</option>
-            <option>S</option>
-            <option>M</option>
-            <option>L</option>
-            <option>XL</option>
-            <option>XXL</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="o-qty">Quantité</label>
-          <input type="number" id="o-qty" min="1" value="1" required>
-        </div>
-      </div>
-      <div class="field">
-        <label for="o-notes">Remarques (optionnel)</label>
-        <textarea id="o-notes" placeholder="Couleur préférée, adresse de livraison, autre..."></textarea>
-      </div>
-      <button type="submit" class="order-submit">Envoyer la commande sur WhatsApp →</button>
-      <div class="order-note">Ouvre WhatsApp avec votre commande déjà rédigée — rien n'est envoyé automatiquement.</div>
-    </form>
-  </div>
-</section>
+        </td>
+        <td>
+          <div class="actions-col">
+            <button class="btn-action wa-btn" data-id="${order.id}" title="WhatsApp">تواصل</button>
+            <button class="btn-action delete-btn" data-id="${order.id}" style="color:var(--blood); border-color:rgba(196,36,28,.3);">حذف</button>
+          </div>
+        </td>
+      `;
 
-<section id="store" class="location">
-  <div data-reveal>
-    <div class="eyebrow" style="margin-bottom:.8rem;">زورونا في المحل</div>
-    <h2>شوفها بعينيك<br>في المحل.</h2>
-    <p>الصور ما تعطيش حق التصميم. تعالو جربوها في محلنا بباتنة — قطع جديدة توصل بصفة منتظمة.</p>
-    <div class="link-row">
-      <a href="https://www.instagram.com/mymodabatna" target="_blank" rel="noopener" class="link-card">إنستغرام ←</a>
-      <a href="https://www.facebook.com/SpecialModa1" target="_blank" rel="noopener" class="link-card">فيسبوك ←</a>
-    </div>
-  </div>
-  <div class="map-card" data-reveal>
-    <div class="map-pin">
-      <div class="dot"></div>
-      <span>باتنة، الجزائر</span>
-    </div>
-  </div>
-</section>
+      // Status change inside orders table
+      tr.querySelector('.o-status-select').addEventListener('change', async function() {
+        const orderId = this.getAttribute('data-id');
+        const newStatus = this.value;
+        await updateOrderStatus(orderId, newStatus);
+      });
 
-<section class="contact">
-  <h2>بضاعة مستوردة<br><span>نوعية ممتازة.</span></h2>
-  <div class="link-row">
-    <a href="https://www.instagram.com/mymodabatna" target="_blank" rel="noopener" class="link-card">@mymodabatna</a>
-    <a href="https://linktr.ee/mymodabatna" target="_blank" rel="noopener" class="link-card">جميع الروابط</a>
-    <a href="https://www.facebook.com/SpecialModa1" target="_blank" rel="noopener" class="link-card">صفحة فيسبوك</a>
-    <a href="https://vt.tiktok.com/ZSC4gVxrw/" target="_blank" rel="noopener" class="link-card">تيك توك</a>
-  </div>
-</section>
+      // WhatsApp follow up
+      tr.querySelector('.wa-btn').addEventListener('click', function() {
+        let msg = `مرحبًا ${order.name}، معك متجر My Moda Batna للتيشيرتات والملابس الحصرية.\n`;
+        msg += `بخصوص طلبك لتيشيرت : *${order.item}* (المقاس : ${order.size}).\n`;
+        msg += `حالة الطلب الحالية هي: *${order.status.toUpperCase()}*.\n`;
+        msg += `هل كل شيء جاهز للشحن إلى ولاية ${order.wilaya} ؟`;
 
-<footer>
-  <span>MY MODA BATNA © 2026</span>
-  <span>Batna, Algérie</span>
-</footer>
+        let clientPhone = order.phone.replace(/[\s\-\(\)]/g, "");
+        if (clientPhone.startsWith("0")) {
+          clientPhone = "213" + clientPhone.substring(1);
+        }
+        window.open(`https://wa.me/${clientPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+      });
 
-<a href="#order" class="sticky-order jump" id="stickyOrder">اطلب الآن — Order Now</a>
+      // Secure Delete inside orders table (No confirm dialog)
+      tr.querySelector('.delete-btn').addEventListener('click', function() {
+        const orderId = this.getAttribute('data-id');
+        showConfirmModal(
+          "حذف طلب وارد",
+          `هل أنت متأكد من رغبتك في حذف طلب العميل "${order.name}" نهائيًا من قاعدة البيانات؟`,
+          async () => {
+            await deleteOrder(orderId);
+          }
+        );
+      });
+
+      tableBody.appendChild(tr);
+    });
+  }
+
+  async function updateOrderStatus(id, status) {
+    if (!currentUser) return;
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'orders', id);
+      await updateDoc(docRef, { status: status });
+      showToast("تم تحديث حالة الطلب.");
+    } catch (e) {
+      console.error(e);
+      showToast("فشل تحديث الطلب.", "info");
+    }
+  }
+
+  async function deleteOrder(id) {
+    if (!currentUser) return;
+    try {
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'orders', id);
+      await deleteDoc(docRef);
+      showToast("تم حذف الطلب نهائيًا.");
+    } catch (e) {
+      console.error(e);
+      showToast("خطأ أثناء حذف الطلب.", "info");
+    }
+  }
+
+  function renderInsights() {
+    const productCounts = {};
+    const wilayaCounts = {};
+
+    ordersList.forEach(order => {
+      const item = order.item || 'Inconnu';
+      const wilaya = order.wilaya || 'Inconnu';
+      productCounts[item] = (productCounts[item] || 0) + (parseInt(order.qty) || 1);
+      wilayaCounts[wilaya] = (wilayaCounts[wilaya] || 0) + 1;
+    });
+
+    const topProducts = Object.entries(productCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    const topProductsContainer = document.getElementById('topProductsContainer');
+    topProductsContainer.innerHTML = '';
+    if (topProducts.length === 0) {
+      topProductsContainer.innerHTML = `<span class="eyebrow" style="color:var(--grey);">لا توجد مبيعات</span>`;
+    } else {
+      topProducts.forEach(([name, count]) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'rank-item';
+        itemEl.innerHTML = `
+          <span class="name">${escapeHtml(name)}</span>
+          <span class="count">${count} قطعة</span>
+        `;
+        topProductsContainer.appendChild(itemEl);
+      });
+    }
+
+    const topWilayas = Object.entries(wilayaCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    const topWilayasContainer = document.getElementById('topWilayasContainer');
+    topWilayasContainer.innerHTML = '';
+    if (topWilayas.length === 0) {
+      topWilayasContainer.innerHTML = `<span class="eyebrow" style="color:var(--grey);">لا توجد ولايات</span>`;
+    } else {
+      topWilayas.forEach(([name, count]) => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'rank-item';
+        itemEl.innerHTML = `
+          <span class="name">${escapeHtml(name.replace(/^\d+\s-\s/, ""))}</span>
+          <span class="count">${count} طلب</span>
+        `;
+        topWilayasContainer.appendChild(itemEl);
+      });
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+</script>
+
 
 <script>
+  // Dynamic Scroll revealing script
   const els = document.querySelectorAll('[data-reveal]');
   const io = new IntersectionObserver((entries)=>{
     entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); } });
@@ -587,22 +2117,6 @@
   const clearBtn = document.getElementById('clearSelected');
   let selectedPhotoUrl = '';
 
-  document.querySelectorAll('.order-this').forEach(btn=>{
-    btn.addEventListener('click', function(){
-      const card = this.closest('.tee');
-      const name = card.getAttribute('data-name');
-      const imgSrc = card.querySelector('img').getAttribute('src');
-      selectedPhotoUrl = card.getAttribute('data-photourl') || '';
-
-      itemInput.value = name;
-      nameEl.textContent = name;
-      thumb.innerHTML = '<img src="' + imgSrc + '" alt="" style="width:100%;height:100%;object-fit:cover;">';
-      preview.classList.add('active');
-
-      document.getElementById('order').scrollIntoView({behavior:'smooth', block:'start'});
-    });
-  });
-
   clearBtn.addEventListener('click', function(){
     preview.classList.remove('active');
     itemInput.value = '';
@@ -617,8 +2131,6 @@
     });
   }, {threshold:.2});
   stickyIo.observe(orderSection);
-
-  const orderForm = document.getElementById('orderForm');
 
   const wilayaPrices = {
     "01 - أدرار": {domicile: 1400, stopdesk: 970}, "02 - الشلف": {domicile: 800, stopdesk: 520},
@@ -662,53 +2174,53 @@
 
   const wilayaCommunes = {
     "01 - أدرار": ["أدرار","بودة","أولاد أحمد تيمي","رقان","سالي","السبع","تسابيت","إن زغمير","زاوية كنتة","اقبلي","أولف","تيمقتن","تيت","فنوغيل","تامنطيط","تامست"],
-    "02 - الشلف": ["الشلف","أم الدروع","سنجاس","سيدي عبد الرحمن","سيدي عكاشة","تنس","بني بوعتاب","الكريمية","حرشون","الظهرة","تاوقريت","بني حواء","بريرة","وادي قوسين","الشطية","الأبيض مجاجة","أولاد فارس","بوقادير","وادي سلي","الصبحة","بنايرية","بوزغاية","الزبوجة","أبو الحسن","تاجنة","تلعصة","المرسى","مصدق","بني راشد","وادي الفضة","أولاد عباس","الحجاج","أولاد بن عبد القادر","عين مران","الهرانفة"],
+    "02 - الشلف": ["الشلف","أم الدروع","سنجاس","سيدي عبد الرحمن","سيدي عكاشة","تنس","بني بوعتاب","الكريمية","حرشون","الظهرة","تاوقريت","بني حواء","بريرة","وادي قوسين","الشطية","الأبيض مجاجة","أولاد فارس","بوقادير","وادي سلي","الصبحة","بنايرية","bوزغاية","الزبوجة","أبو الحسن","تاجنة","تلعصة","المرسى","مصدق","بني راشد","وادي الفضة","أولاد عباس","الحجاج","أولاد بن عبد القادر","عين مران","الهرانفة"],
     "03 - الأغواط": ["الأغواط","بن ناصر بن شهرة","قصر الحيران","العسافية","سيدي مخلوف","حاسي الدلاعة","حاسي الرمل","عين ماضي","الحويطة","الخنق","تاجموت","تاجرونة","عين سيدي علي","البيضاء","قلتة سيدي سعد","بريدة","الحاج مشري","تاويالة","الغيشة","أفلو","سبقاق","سيدي بوزيد","وادي مرة","وادي مزي"],
     "04 - أم البواقي": ["عين الزيتون","أم البواقي","عين البيضاء","بريش","الزرق","عين مليلة","أولاد قاسم","أولاد حملة","العامرية","سيقوس","عين ببوش","عين الديس","الضلعة","الجازية","عين كرشة","الحرملية","هنشير تومغني","فكيرينة","وادي نيني","بئر الشهداء","أولاد زواي","سوق نعمان","قصر الصباحي","بحير الشرقي","البلالة","مسكيانة","الرحية","عين فكرون","الفجوج بوغرارة سعودي"],
-    "05 - باتنة": ["باتنة","فسديس","وادي الشعبة","حيدوسة","قصر بلزمة","مروانة","وادي الماء","لازرو","سريانة","زانة البيضاء","منعة","تغرغار","عين ياقوت","بومية","جرمة","المعذر","عيون العصافير","تازولت","بومقر","نقاوس","سفيان","أريس","تيغانمين","عين جاسر","الحاسي","سقانة","تيلاطو","فم الطوب","إشمول","إينوغيسن","بوزينة","لارباع","بولهيلات","الشمرة","بريكة","بيطام","إمدوكل","عزيل عبد القادر","الجزار","أولاد عمار","غسيرة","كيمل","تكوت","عين التوتة","بني فضالة الحقانية","معافة","أولاد عوف","شير","وادي الطاقة","ثنية العابد","أولاد فاضل","تيمقاد","القصبات","القيقبة","أولاد سلام","الرحبات","رأس العيون","تالخمت","لمسان","أولاد سي سليمان","تاكسلانت"],
-    "06 - بجاية": ["بجاية","وادي غير","أميزور","بني جليل","فرعون","سمعون","تيمزريت","مالبو","سوق لإثنين","تامريجت","بوخليفة","تالة حمزة","تيشي","أيت رزين","إغيل علي","أيت إسماعيل","درقينة","تاسكريوت","أوقاس","تيزي نبربر","أدكار","بني كسيلة","تاوريرت إغيل","أقبو","شلاطة","اغرم","تامقرة","أمالو","بوحمزة","مسيسنة","صدوق","بني مليكش","بو جليل","تازمالت","أكفادو","شميني","سوق اوفلا","طيبان","برباشة","كنديرة","أوزلاقن","الفلاي","سيدي عياد","سيدي عيش","تيفرة","تينبدار","القصر","فناية الماثن","توجة","ذراع القايد","خراطة","بني معوش"],
+    "05 - باتنة": ["باتنة","فسديس","وادي الشعبة","حيدوسة","قصر بلزمة","مروانة","وادي الماء","لازرو","سريانة","زانة البيضاء","منعة","تغرغار","عين ياقوت","bومية","جرمة","المعذر","عيون العصافير","تازولت","bومقر","نقاوس","سفيان","أريس","تيغانمين","عين جاسر","الحاسي","سقانة","تيلاطو","فم الطوب","إشمول","إينوغيسن","بوزينة","لارباع","بولهيلات","الشمرة","بريكة","بيطام","إمدوكل","عزيل عبد القادر","الجزار","أولاد عمار","غسيرة","كيمل","تكوت","عين التوتة","بني فضالة الحقانية","معافة","أولاد عوف","شير","وادي الطاقة","ثنية العابد","أولاد فاضل","تيمقاد","القصبات","القيقبة","أولاد سلام","الرحبات","رأس العيون","تالخمت","لمسان","أولاد سي سليمان","تاكسلانت"],
+    "06 - بجاية": ["بجاية","وادي غير","أميزور","بني جليل","فرعون","سمعون","تيمزريت","مالبو","سوق لإثنين","تامريجت","بوخليفة","تالة حمزة","تيشي","أيت رزين","إغيل علي","أيت إسماعيل","درقينة","تاسكريوت","أوقاس","تيزي نبربر","أدكار","bني كسيلة","تاوريرت إغيل","أقبو","شlaطة","اغرم","تامقرة","أمالو","بوحمزة","مسيسنة","صدوق","بني مليكش","بو جليل","تازمالت","أكفادو","شميني","سوق اوفلا","طيبان","برباشة","كنديرة","أوزلاقن","الفلاي","سيدي عياد","سيدي عيش","تيفرة","تينبدار","القصر","فناية الماثن","توجة","ذراع القايد","خراطة","بني معوش"],
     "07 - بسكرة": ["بسكرة","الحاجب","عين الناقة","شتمة","الحوش","سيدي عقبة","مشونش","الفيض","خنقة سيدي ناجي","المزيرعة","زريبة الوادي","عين زعطوط","القنطرة","الوطاية","برانيس","جمورة","برج بن عزوز","بوشقرون","ليشانة","طولقة","ليوة","مخادمة","مليلي","أوماش","أورلال","الغروس","فوغالة"],
     "08 - بشار": ["بشار","بوكايس","لحمر","موغل","القنادسة","المريجة","تبلبالة","تاغيت","العبادلة","عرق فراج","مشرع هواري بومدين","بني ونيف"],
     "09 - البليدة": ["البليدة","بوعرفة","بوعينان","الشبلي","بني تامو","بن خليل","وادي العلايق","بني مراد","الشريعة","أولاد يعيش","العفرون","وادي جر","عين الرمانة","الشفة","موزاية","جبابرة","مفتاح","بوفاريك","قرواو","الصومعة","الأربعاء","صوحان","بوقرة","حمام ملوان","اولاد سلامة"],
-    "10 - البويرة": ["عين الترك","أيت لعزيز","البويرة","المقراني","سوق الخميس","أعمر","جباحية","قادرية","حيزر","تاغزوت","بودربالة","بوكرم","قرومة","الأخضرية","معلة","زبربر","الهاشمية","وادي البردي","برج أوخريص","الحجرة الزرقاء","مزدور","تاقديت","أهل القصر","بشلول","العجيبة","الأسنام","أولاد راشد","عين الحجر","عين العلوي","عين بسام","بئر غبالو","الخبوزية","روراوة","أغبالو","شرفة","حنيف","أمشدالة","سحاريج","آث  منصور","الدشمية","ديرة","الحاكمية","المعمورة","ريدان","سور الغزلان"],
+    "10 - البويرة": ["عين الترك","أيت لعزيز","البويرة","المقراني","سوق الخميس","أعمر","جباحية","قادرية","حيزر","تاغزوت","بودربالة","بوكرم","قرومة","الأخضرية","معلة","زبربر","الهاشمية","وادي البردي","برج أوخريص","الحجرة الزرقاء","مزدور","تاقديit","أهل القصر","بشلول","العجيبة","الأسنام","أولاد راشد","عين الحجر","عين العلوي","عين بسام","بئر غبالو","الخبوزية","روراوة","أغبالو","شرفة","حنيف","أمشدالة","سحاريج","آث  منصور","الدشمية","ديرة","الحاكمية","المعمورة","ريدان","سور الغزلان"],
     "11 - تمنراست": ["عين امقل","تمنراست","ابلسة","أدلس","تاظروك"],
-    "12 - تبسة": ["تبسة","بئر العاتر","العقلة المالحة","الشريعة","ثليجان","بوخضرة","العوينات","فركان","نقرين","بئر مقدم","قريقر","الحمامات","بكارية","بولحاف الدير","الكويف","بئر الذهب","مرسط","بجن","المزرعة","العقلة","سطح قنطيس","عين الزرقاء","المريج","الونزة","الماء الابيض","الحويجبات","أم علي","صفصاف الوسرى"],
+    "12 - تبسة": ["تبسة","بئر العاتر","العقلة المالحة","الشريعة","ثليجان","بوخضرة","العوينات","فركان","نقرين","بئر مقدم","قريقر","الحمامات","بكارية","بولحاف الدير","الكويف","bئر الذهب","مرسط","بجن","المزرعة","العقلة","سطح قنطيس","عين الزرقاء","المريج","الونزة","الماء الابيض","الحويجبات","أم علي","صفصاف الوسرى"],
     "13 - تلمسان": ["تلمسان","عين النحالة","عين تالوت","عين يوسف","بني وارسوس","الفحول","الرمشي","سبعة شيوخ","بوحلو","صبرة","دار يغمراسن","الغزوات","السواحلية","تيانت","بني صميل","وادي الخضر","أولاد ميمون","بني بهدل","بني سنوس","العزايل","باب العسة","السواني","سوق الثلاثاء","عين فتاح","عين الكبيرة","فلاوسن","بن سكران","سيدي العبدلي","الحناية","أولاد رياح","زناتة","حمام بوغرارة","مغنية","العريشة","القور","سبدو","بني بوسعيد","سيدي مجاهد","مرسى بن مهيدي","مسيردة الفواقة","جبالة","ندرومة","البويهي","سيدي الجيلالي","بني خلاد","هنين","عين فزة","عمير","شتوان","عين غرابة","بني مستر","منصورة","تيرني بني هديل"],
-    "14 - تيارت": ["تيارت","مدروسة","ملاكو","سيدي بختي","عين الذهب","شحيمة","النعيمة","عين بوشقيف","دحموني","قرطوفة","الرحوية","عين دزاريت","مهدية","الناظورة","السبعين","الفايجة","سي عبد الغني","السوقر","توسنينة","مغيلة","السبت","سيدي حسني","عين الحديد","فرندة","تخمرت","عين كرمس","جبيلات الرصفاء","مادنة","مدريسة","سيدي عبد الرحمن","قصر الشلالة","سرغين","زمالة  الأمير عبد القادر","وادي ليلي","سيدي علي ملال","تيدة","جيلالي بن عمار","مشرع الصفا","تاقدمت","بوقرة","حمادية","الرشايقة"],
-    "15 - تيزي وزو": ["تيزي وزو","أبي يوسف","عين الحمام","أيت يحيى","اقبيل","بوجيمة","ماكودة","عين الزاوية","أيت يحي موسى","ذراع الميزان","فريقات","مكيرة","تيزي غنيف","إفــرحــونان","إيلـيــلتـن","إمســوحال","عزازقة","فريحة","إيفيغاء","إعــكورن","زكري","أيت عقـواشة","إيرجـــن","الأربعــاء ناث إيراثن","أيت  أومالو","تيزي راشد","أيت عيسى ميمون","واقنون","تيمـيزار","معـــاتقة","سوق الإثنين","أيت محمود","بنــــي زمنزار","بني عيسي","بني دوالة","بني زيكــي","بوزقــن","إيجــار","إيلولة أومـــالو","أقني قغران","أيت بــوادو","واضية","تيزي نثلاثة","أغريب","أيت شافع","أقرو","أزفون","إفليـــسن","ميزرانـــة","تيقـزيرت","أسي يوسف","بوغني","بونوح","مشطراس","ذراع بن خدة","سيدي نعمان","تادمايت","تيرمتين","أيت بومهدي","أيت تودرت","واسيف","أيت خليلي","مقــلع","صوامـــع","بني يني","إبودرارن","يطــافن"],
+    "14 - تيارت": ["تيارت","مدروسة","ملاكو","سيدي بختي","عين الذهب","شحيمة","النعيمة","عين بوشقيف","دحموني","قرطوفة","الرحوية","عين دزاريت","مهدية","الناظورة","السبعين","الفايجة","سي عبد الغني","السوقر","توسنينة","مغيلة","السبت","سيدي حسني","عين الحديد","فرندة","تخمرت","عين كرمس","جبيلات الرصفاء","مادنة","مدريسة","سيدي عبد الرحمن","قصر الشلالة","سرغين","زمالة  الأمير عبد القادر","وادي ليلي","سيدي علي ملال","تيدة","جيلالي بن عمار","مشرع الصفا","تاقدمت","bوقرة","حمادية","الرشايقة"],
+    "15 - تيزي وزو": ["تيزي وزو","أبي يوسف","عين الحمام","أيت يحيى","اقبيل","بوجيمة","ماكودة","عين الزاوية","أيت يحي موسى","ذراع الميزان","فريقات","مكيرة","تيزي غنيف","إفــرحــونان","إيلـيــلتـن","إمســوحال","عزازقة","فريحة","إيفيغاء","إعــكورن","زكري","أيت عقـواشة","إيرجـــن","الأربعــاء ناث إيراثن","أيت  أومالو","تيزي راشد","أيت عيسى ميمون","واقنون","تيمـيزار","معـــاتقة","سوق الإثنين","أيت محمود","بنــــي زمنزار","بني عيسي","بني دوالة","بني زيكــي","bوزقــن","إيجــار","إيلولة أومـــالو","أقني قغران","أيت بــوادو","واضية","تيزي نثلاثة","أغريب","أيت شافع","أقرو","أزفون","إفليـــسن","ميزرانـــة","تيقـزيرت","أسي يوسف","بوغني","bونوح","مشطراس","ذراع بن خدة","سيدي نعمان","تادمايت","تيرمتين","أيت بومهدي","أيت تودرت","واسيف","أيت خليلي","مقــلع","صوامـــع","بني يني","إبودرارن","يطــافن"],
     "16 - الجزائر": ["الجزائر الوسطى","المدنية","المرادية","سيدي امحمد","باب الوادي","بولوغين بن زيري","القصبة","وادي قريش","الرايس حميدو","بئر مراد رايس","بئر خادم","جسر قسنطينة","حيدرة","السحاولة","ابن عكنون","بني مسوس","بوزريعة","الابيار","باش جراح","بوروبة","الحراش","وادي السمار","براقي","الكاليتوس","سيدي موسى","المغارية","حسين داي","القبة","محمد بلوزداد","عين طاية","باب الزوار","برج البحري","برج الكيفان","الدار البيضاء","المرسى","المحمدية","بئر توتة","اولاد شبل","تسالة المرجة","هراوة","رغاية","الرويبة","المعالمة","الرحمانية","سويدانية","سطاوالي","زرالدة","بابا حسن","الدويرة","الدرارية","العاشور","الخرايسية","عين بنيان","الشراقة","دالي ابراهيم","الحمامات","اولاد فايت"],
-    "17 - الجلفة": ["الجلفة","عين معبد","حاسي بحبح","حاسي العش","زعفران","عمورة","فيض البطمة","أم العظام","بنهار","بيرين","عين الشهداء","دويس","الادريسية","دلدول","قطارة","مسعد","سد الرحال","سلمانة","الخميس","حاسي فدول","سيدي لعجال","عين فقه","بويرة الأحداب","حد الصحاري","دار الشيوخ","مليليحة","سيدي بايزيد","بن يعقوب","الشارف","القديد","عين الإبل","مجبارة","تعظميت","زكار","عين وسارة","قرنيني"],
-    "18 - جيجل": ["جيجل","العوانة","سلمى بن زيادة","أراقن سويسي","زيامة منصورية","بوسيف أولاد عسكر","الشحنة","الامير عبد القادر","وجانة","الطاهير","برج الطهر","الشقفة","القنار نشفي","سيدي عبد العزيز","الميلية","أولاد يحيى خدروش","أولاد رابح","سيدي معروف","غبالة","السطارة","بوراوي بلهادف","الجمعة بني حبيبي","العنصر","خيري واد عجول","بودريعة بني  ياجيس","جيملة","قاوس","تاكسنة"],
-    "19 - سطيف": ["سطيف","عين الكبيرة","الدهامشة","أولاد عدوان","عين السبت","بني عزيز","معاوية","بلاعة","بئر العرش","الولجة","تاشودة","بابور","سرج الغول","قجال","أولاد صابر","بازر سكرة","العلمة","قلتة زرقاء","بني فودة","جميلة","عين لقراج","بني شبانة","بني ورتيلان","بني موحلي","عين عباسة","عين أرنات","أوريسيا","مزلوق","عموشة","واد البارد","تيزي نبشار","عين ولمان","قلال","قصر الابطال","أولاد سي أحمد","أيت نوال مزادة","ايت تيزي","بوعنداس","بوسلام","حمام السخنة","الطاية","التلة","بوطالب","الحامة","أولاد تبان","الرصفة","صالح باي","عين أزال","عين الحجر","بيضاء برج","بئر حدادة","قنزات","حربيل","عين الروى","بني وسين","بوقاعة","ذراع قبيلة","حمام قرقور","ماوكلان","تالة إيفاسن"],
+    "17 - الجلفة": ["الجلفة","عين معبد","حاسي بحبح","حاسي العش","زعفران","عمورة","فيض البطمة","أم العظام","bنهار","بيرين","عين الشهداء","دويس","الادريسية","دلدول","قطارة","مسعد","سد الرحال","سلمانة","الخميس","حاسي فدول","سيدي لعجال","عين فقه","بويرة الأحداب","حد الصحاري","دار الشيوخ","مليليحة","سيدي بايزيد","بن يعقوب","الشارف","القديد","عين الإبل","مجبارة","تعظميت","زكار","عين وسارة","قرنيني"],
+    "18 - جيجل": ["جيجل","العوانة","سلمى بن زيادة","أراقن سويسي","زيامة منصورية","bوسيف أولاد عسكر","الشحنة","الامير عبد القادر","وجانة","الطاهير","برج الطهر","الشقفة","القنار نشفي","سيدي عبد العزيز","الميلية","أولاد يحيى خدروش","أولاد رابح","سيدي معروف","غبالة","السطارة","bوراوي بلهادف","الجمعة بني حبيبي","العنصر","خيري واد عجول","بودريعة بني  ياجيس","جيملة","قاوس","تاكسنة"],
+    "19 - سطيف": ["سطيف","عين الكبيرة","الدهامشة","أولاد عدوان","عين السبت","بني عزيز","معاوية","بلاعة","بئر العرش","الولجة","تاشودة","بابور","سرج الغول","قجال","أولاد صابر","بازر سكرة","العلمة","قلتة زرقاء","بني فودة","جميلة","عين لقراج","بني شبانة","بني ورتيلان","bني موحلي","عين عباسة","عين أرنات","أوريسيا","مزلوق","عموشة","واد البارد","تيزي نبشار","عين ولمان","قلال","قصر الابطال","أولاد سي أحمد","أيت nوال مزادة","ايت تيزي","بوعنداس","bوسلام","حمام السخنة","الطاية","التلة","بوطالب","الحامة","أولاد تبان","الرصفة","صالح باي","عين أزال","عين الحجر","بيضاء برج","bئر حدادة","قنزات","حربيل","عين الروى","بني وسين","bوقاعة","ذراع قبيلة","حمام قرقور","ماوكلان","تالة إيفاسن"],
     "20 - سعيدة": ["سعيدة","عين الحجر","مولاي العربي","سيدي احمد","دوي ثابت","يوب","هونت","أولاد خالد","سيدي عمر","سيدي بوبكر","عين السخونة","الحساسنة","المعمورة","عين السلطان","أولاد إبراهيم","تيرسين"],
     "21 - سكيكدة": ["فلفلة","حمادي كرومة","سكيكدة","عين زويت","بوشطاطة","الحدائق","عين شرشار","عزابة","جندل سعدي محمد","الغدير","السبت","بكوش لخضر","بن عزوز","المرسى","بني زيد","الشرايع","القل","خناق مايو","وادي الزهور","أولاد عطية","قنواع","الزيتونة","الحروش","مجاز الدشيش","أولاد حبابة","صالح بو الشعور","زردازة","عين بوزيان","بني ولبان","سيدي مزغيش","بني بشير","رمضان جمال","بين الويدان","الكركرة","تمالوس","عين قشرة","الولجة بولبلوط","أم الطوب"],
-    "22 - سيدي بلعباس": ["سيدي بلعباس","عين الثريد","السهالة الثورة","تسالة","بلعربي","مصطفى بن ابراهيم","تلموني","زروالة","الضاية","مزاورو","تغاليمت","تلاغ","عين قادة","لمطار","سيدي علي بوسيدي","سيدي دحو الزاير","بئر الحمام","مرحوم","سيدي شعيب","العمارنة","سيدي خالد","سيدي لحسن","سيدي يعقوب","بن عشيبة شلية","حاسي دحو","وادي سفيون","تنيرة","عين تندمين","الحصيبة","مولاي سليسن","مرين","وادي تاوريرة","تاودموت","تفسور","وادي السبع","راس الماء","رجم دموش","عين البرد","مكدرة","سيدي ابراهيم","سيدي حمادوش","عين أدن","بوجبهة البرج","مسيد","سفيزف","بضرابين المقراني","بن باديس","شيطوان البلايلة","حاسي زهانة","بوخنفيس","سيدي علي بن يوب","طابية"],
+    "22 - سيدي بلعباس": ["سيدي بلعباس","عين الثريد","السهالة الثورة","تسالة","بلعربي","مصطفى بن ابراهيم","تلموني","زروالة","الضاية","مزاورو","تغاليمت","تلاغ","عين قادة","لمطار","سيدي علي بوسيدي","سيدي دحو الزاير","bئر الحمام","مرحوم","سيدي شعيب","العمارنة","سيدي خالد","سيدي لحسن","سيدي يعقوب","بن عشيبة شلية","حاسي دحو","وادي سفيون","تنيرة","عين تندمين","الحصيبة","مولاي سليسن","مرين","وادي تاوريرة","تاودموت","تفسور","وادي السبع","راس الماء","رجم دموش","عين البرد","مكدرة","سيدي ابراهيم","سيدي حمادوش","عين أدن","بوجبهة البرج","مسيد","سفيزف","bضرابين المقراني","بن باديس","شيطوان البلايلة","حاسي زهانة","بوخنفيس","سيدي علي بن يوب","طابية"],
     "23 - عنابة": ["عنابة","سرايدي","برحال","واد العنب","التريعات","الحجار","سيدي عمار","البوني","عين الباردة","الشرفة","العلمة","شطايبي"],
-    "24 - قالمة": ["بن جراح","قالمة","عين رقادة","برج صباط","وادي الزناتي","عين العربي","عين مخلوف","تاملوكة","عين صندل","بوحشانة","لخزارة","بلخير","بني مزلين","بومهرة أحمد","جبالة الخميسي","قلعة بوصبع","نشماية","بوحمدان","حمام دباغ","الركنية","الدهوارة","حمام النبايل","وادي الشحم","عين بن بيضاء","بوشقوف","مجاز الصفاء","وادي فراغة","بوعاتي محمود","الفجوج","هيليوبوليس","مجاز عمار","هواري بومدين","رأس العقبة","سلاوة عنونة"],
+    "24 - قالمة": ["بن جراح","قالمة","عين رقادة","برج صباط","وادي الزناتي","عين العربي","عين مخلوف","تاملوكة","عين صندل","بوحشانة","لخزارة","بلخير","بني مزلين","بومهرة أحمد","جبالة الخميسي","قلعة بوصبع","نشماية","بوحمدان","حمام دباغ","الركنية","الدهوارة","حمام النبايل","وادي الشحم","عين بن بيضاء","bوشقوف","مجاز الصفاء","وادي فراغة","بوعاتي محمود","الفجوج","هيليوبوليس","مجاز عمار","هواري بومدين","رأس العقبة","سلاوة عنونة"],
     "25 - قسنطينة": ["قسنطينة","ديدوش مراد","حامة بوزيان","بني حميدان","زيغود يوسف","عين السمارة","الخروب","أولاد رحمون","عين عبيد","أبن باديس الهرية","ابن زياد","بوجريو مسعود"],
-    "26 - المدية": ["ذراع السمار","المدية","تمسقيدة","بن شكاو","الحمدانية","وزرة","تيزي مهدي","عين بوسيف","العوينات","الكاف الاخضر","أولاد امعرف","سيدي دامد","بعطة","العمارية","أولاد إبراهيم","بئر بن عابد","القلب الكبير","سدراية","عين اقصير","شلالة العذاورة","شنيقل","تفراوت","بوشراحيل","خمس جوامع","سيدي نعمان","عزيز","دراق","أم الجليل","جواب","سيدي زهار","سيدي زيان","السواقي","قصر البخاري","مفاتحة","السانق","العزيزية","مغراوة","ميهوب","بوعيش","بوغزول","الشهبونية","حناشة","عوامري","وادي حربيل","بوعيشون","أولاد بوعشرة","سي المحجوب","بني سليمان","بوسكن","سيدي الربيع","البرواقية","أولاد دايد","الربعية","مجبر","سغوان","ثلاث دوائر","الزبيرية","العيساوية","الحوضان","مزغنة","تابلاط","بوغار","أولاد عنتر","أولاد هلال"],
-    "27 - مستغانم": ["مستغانم","عين نويسي","فرناقة","الحسيان (بني ياحي","حاسي ماماش","مزغران","ستيدية","عين تادلس","وادي الخير","سيدي بلعطار","سور","عين بودينار","خير الدين","صيادة","أولاد مع الله","سيدي علي","تزقايت","بن عبد المالك رمضان","حجاج","سيدي لخضر","عشعاشة","خضرة","نكمارية","أولاد بوغالم","بوقيراط","صفصاف","سيرات","السوافلية","عين سيدي الشريف","منصورة","ماسرة","الطواهرية"],
-    "28 - المسيلة": ["المسيلة","حمام الضلعة","ونوغة","أولاد منصور","تارمونت","المعاضيد","المطارفة","أولاد عدي لقبالة","أولاد دراج","السوامع","الحوامد","خبانة","مسيف","شلال","خطوطي سد الجير","معاريف","أولاد ماضي","عين الخضراء","بلعايبة","برهوم","دهاهنة","مقرة","بني يلمان","بوطي السايح","سيدي عيسى","عين الحجل","سيدي هجرس","بوسعادة","الهامل","ولتام","بن زوه","أولاد سيدي ابراهيم","سيدي عامر","تامسة","بن سرور","محمد بوضياف","أولاد سليمان","زرزور","عين الملح","عين فارس","عين الريش","بئر فضة","سيدي امحمد","امجدل","مناعة","جبل مساعد","سليم"],
+    "26 - المدية": ["ذراع السمار","المدية","تمسقيدة","بن شكاو","الحمدانية","وزرة","تيزي مهدي","عين بوسيف","العوينات","الكاف الاخضر","أولاد امعرف","سيدي دامد","بعطة","العمارية","أولاد إبراهيم","بئر بن عابد","القلب الكبير","سدراية","عين اقصير","شلالة العذاورة","شنيقل","تفراوت","bوشراحيل","خمس جوامع","سيدي نعمان","عزيز","دراق","أم الجليل","جواب","سيدي زهار","سيدي زيان","السواقي","قصر البخاري","مفاتحة","السانق","العزيزية","مغراوة","ميهوب","بوعيش","بوغزول","الشهبونية","حناشة","عوامري","وادي حربيل","بوعيشون","أولاد بوعشرة","سي المحجوب","بني سليمان","بوسكن","سيدي الربيع","البرواقية","أولاد دايد","الربعية","مجبر","سغوان","ثلاث دوائر","الزبيرية","العيساوية","الحوضان","مزغنة","تابلاط","بوغار","أولاد عنتر","أولاد هلال"],
+    "27 - مستغانم": ["مستغانم","عين نويسي","فرناقة","الحسيان (بني ياحي","حاسي ماماش","مزغران","ستيدية","عين تادلس","وادي الخير","سيدي بلعطار","سور","عين بودينار","خير الدين","صيادة","أولاد مع الله","سيدي علي","تزقايت","بن عبد المالك رمضان","حجاج","سيدي لخضر","عشعاشة","خضرة","نكمارية","أولاد بوغالم","bوقيراط","صفصاف","سيرات","السوافلية","عين سيدي الشريف","منصورة","ماسرة","الطواهرية"],
+    "28 - المسيلة": ["المسيلة","حمام الضلعة","ونوغة","أولاد منصور","تارمونت","المعاضيد","المطارفة","أولاد عدي لقبالة","أولاد دراج","السوامع","الحوامد","خبانة","مسيف","شلال","خطوطي سد الجير","معاريف","أولاد ماضي","عين الخضراء","بلعايبة","برهوم","دهاهنة","مقرة","بني يلمان","bوطي السايح","سيدي عيسى","عين الحجل","سيدي هجرس","بوسعادة","الهامل","ولتام","بن زوه","أولاد سيدي ابراهيم","سيدي عامر","تامسة","بن سرور","محمد بوضياف","أولاد سليمان","زرزور","عين الملح","عين فارس","عين الريش","bئر فضة","سيدي امحمد","امجدل","مناعة","جبل مساعد","سليم"],
     "29 - معسكر": ["معسكر","بوحنيفية","القطنة","حسين","القرط","فروحة","تيزي","السهايلية","سيدي قادة","تيغنيف","الحشم","نسمط","زلامطة","عين فراح","وادي الأبطال","سيدي عبد الجبار","غريس","ماقضة","ماوسة","المطمور","سيدي بوسعيد","البرج","المنور","خلوية","عين فكان","عين أفرص","قرجوم","وادي التاغية","عوف","بنيان","غروس","عين فارس","المأمونية","بوهني","الشرفاء","سيق","العلايمية","عقاز","رأس عين عميروش","القعدة","زهانة","الغمري","فراقيق","مقطع الدوز","المحمدية","سجرارة","سيدي عبد المومن"],
     "30 - ورقلة": ["ورقلة","الرويسات","انقوسة","حاسي مسعود","عين البيضاء","حاسي بن عبد الله","سيدي خويلد","البرمة"],
-    "31 - وهران": ["وهران","بن فريحة","قديل","حاسي مفسوخ","بئر الجير","حاسي بن عقبة","حاسي بونيف","الكرمة","السانية","سيدي الشحمي","أرزيو","سيدي بن يبقى","عين البية","بطيوة","مرسى الحجاج","عين الترك","بوسفر","العنصر","المرسى الكبير","بوفاتيس","البراية","وادي تليلات","طفراوي","عين الكرمة","بوتليليس","مسرغين"],
+    "31 - وهران": ["وهران","بن فريحة","قديل","حاسي مفسوخ","بئر الجير","حاسي بن عقبة","حاسي بونيف","الكرمة","السانية","سيدي الشحمي","أرزيو","سيدي بن يبقى","عين البية","بطيوة","مرسى الحجاج","عين الترك","بوسفر","العنصر","المرسى الكبير","bوفاتيس","البراية","وادي تليلات","طفراوي","عين الكومة","بوتليليس","مسرغين"],
     "32 - البيض": ["البيض","رقاصة","الشقيق","الكاف الأحمر","بريزينة","كراكدة","الغاسول","الأبيض سيدي الشيخ","عين العراك","اربوات","البنود","بوقطب","الخيثر","توسمولين","شلالة","المحرة","بوسمغون","بوعلام","سيدي عامر","سيدي سليمان","سيدي طيفور","ستيتن"],
     "33 - إليزي": ["إيليزي","برج عمر إدريس","دبداب","إن أمناس"],
-    "34 - برج بوعريريج": ["برج بوعريرج","عين تسرة","أولاد أبراهم","رأس الوادي","برج زمورة","أولاد دحمان","تسامرت","بن داود","المهير","حرازة","المنصورة","أولاد سيدي ابراهيم","عين تاغروت","تيكستار","بليمور","برج الغدير","العناصر","غيلاسة","تقلعيت","العش","الحمادية","القصور","الرابطة","الياشير","حسناوة","مجانة","ثنية النصر","القلة","جعافرة","الماين","تفرق","بئر قاصد علي","خليل","سيدي أمبارك"],
-    "35 - بومرداس": ["بومرداس","قورصو","تيجلابين","بودواو","بودواو البحري","بوزقزة قدارة","الخروبة","أولاد هداج","برج منايل","جنات","لقاطة","زموري","بغلية","سيدي داود","تاورقة","الناصرية","أولاد عيسى","شعبة العامر","يسر","سي مصطفى","تيمزريت","عمال","بني عمران","سوق الحد","الثنية","أعفير","بن شود","دلس","حمادي","خميس الخشنة","الاربعطاش","أولاد موسى"],
-    "36 - الطارف": ["عين العسل","بوقوس","الطارف","الزيتونة","عين الكرمة","بوحجار","حمام بني صالح","وادي الزيتون","بن مهيدي","بريحان","الشط","العيون","القالة","رمل السوق","السوارخ","بوثلجة","الشافية","بحيرة الطيور","شبيطة مختار","شحاني","الذرعـان","عصفور","البسباس","زريزر"],
+    "34 - برج بوعريريج": ["برج بوعريرج","عين تسرة","أولاد أبراهم","رأس الوادي","برج زمورة","أولاد دحمان","تسامرت","بن داود","المهير","حرازة","المنصورة","أولاد سيدي ابراهيم","عين تاغروت","تيكستار","bليمور","برج الغدير","العناصر","غيلاسة","تقلعيت","العش","الحمادية","القصور","الرابطة","الياشير","حسناوة","مجانة","ثنية النصر","القلة","جعافرة","الماين","تفرق","بئر قاصد علي","خليل","سيدي أمبارك"],
+    "35 - بومرداس": ["bومرداس","قورصو","تيجلابين","بودواو","بودواو البحري","بوزقزة قدارة","الخروبة","أولاد هداج","برج منايل","جنات","لقاطة","زموري","بغلية","سيدي داود","تاورقة","الناصرية","أولاد عيسى","شعبة العامر","يسر","سي مصطفى","تيمزريت","عمال","بني عمران","سوق الحد","الثنية","أعفير","بن شود","دلس","حمادي","خميس الخشنة","الاربعطاش","أولاد موسى"],
+    "36 - الطارف": ["عين العسل","bوقوس","الطارف","الزيتونة","عين الكومة","بوحجار","حمام بني صالح","وادي الزيتون","بن مهيدي","بريحان","الشط","العيون","القالة","رمل السوق","السوارخ","بوثلجة","الشافية","بحيرة الطيور","شبيطة مختار","شحاني","الذرعـان","عصفور","البسباس","زريزر"],
     "37 - تندوف": ["أم العسل","تندوف"],
-    "38 - تيسمسيلت": ["أولاد بسام","تيسمسيلت","بني شعيب","بني لحسن","برج بونعامة","سيدي سليمان","سيدي بوتوشنت","ثنية الاحد","بوقائد","الأربعاء","الأزهرية","لرجام","الملعب","سيدي العنتري","تملاحت","برج الأمير عبد القادر","اليوسفية","خميستي","العيون","عماري","المعاصم","سيدي عابد"],
+    "38 - تيسمسيلت": ["أولاد بسام","تيسمسيلت","بني شعيب","بني لحسن","برج بونعامة","سيدي سليمان","سيدي بوتوشنت","ثنية الاحد","bوقائد","الأربعاء","الأزهرية","لرجام","الملعب","سيدي العنتري","تملاحت","برج الأمير عبد القادر","اليوسفية","خميستي","العيون","عماري","المعاصم","سيدي عابد"],
     "39 - الوادي": ["الوادي","كوينين","العقلة","النخلة","الرباح","البياضة","قمار","ورماس","تغزوت","الحمراية","الرقيبة","الدبيلة","حساني عبد الكريم","حاسي خليفة","الطريفاوي","بن  قشة","دوار الماء","الطالب العربي","المقرن","سيدي عون","اميه وانسة","وادي العلندة"],
-    "40 - خنشلة": ["خنشلة","قايس","الرميلة","تاوزيانت","بغاي","الحامة","انسيغة","طامزة","عين الطويلة","متوسة","بوحمامة","شلية","مصارة","يابوس","ششار","جلال","الولجة","خيران","بابار","المحمل","أولاد رشاش"],
+    "40 - خنشلة": ["خنشلة","قايس","الرميلة","تاوزيانت","bغاي","الحامة","انسيغة","طامزة","عين الطويلة","متوسة","بوحمامة","شلية","مصارة","يابوس","ششار","جلال","الولجة","خيران","بابار","المحمل","أولاد رشاش"],
     "41 - سوق أهراس": ["سوق أهراس","عين سلطان","خميسة","سدراتة","الحنانشة","المشروحة","عين الزانة","أولاد إدريس","الدريعة","تاورة","الزعرورية","الحدادة","الخضارة","أولاد مومن","المراهنة","ويلان","سيدي فرج","بئر بوحوش","سافل الويدان","الزوابي","مداوروش","الراقوبة","تيفاش","وادي الكبريت","أم العظايم","ترقالت"],
     "42 - تيبازة": ["تيبازة","حجوط","مراد","مناصر","الناظور","سيدي عامر","أغبال","قوراية","مسلمون","شرشال","حجرة النص","سيدي غيلاس","سيدي سميان","بني ميلك","الداموس","الأرهاط","دواودة","فوكة","عين تاقورايت","بوهارون","بواسماعيل","خميستي","أحمر العين","بورقيقة","سيدي راشد","الحطاطبة","الشعيبة","القليعة"],
     "43 - ميلة": ["عين التين","ميلة","سيدي خليفة","فرجيوة","يحي بني قشة","عين الملوك","شلغوم العيد","وادي العثمانية","مشيرة","وادي سقان","التلاغمة","بن يحي عبد الرحمن","أولاد اخلوف","تاجنانت","أحمد راشدي","وادي النجاء","زغاية","بوحاتم","دراحي بوصلاح","الرواشد","تيبرقنت","القرارم قوقة","حمالة","الشيقارة","سيدي مروان","مينار زارزة","تسدان حدادة","اعميرة اراس","ترعي باينان","تسالة لمطاعي"," عين البيضاء أحريش","العياضي برباس"],
-    "44 - عين الدفلى": ["عين الدفلى","بن علال","مليانة","بومدفع","الحسينية","خميس مليانة","سيدي الأخضر","عين البنيان","عين التركي","حمام ريغة","بوراشد","جليدة","جمعة أولاد الشيخ","عريب","العامرة","المخاطرية","العطاف","تبركانين","عين بويحيى","العبادية","تاشتة زقاغة","بربوش","جندل","وادي الشرفاء","عين الاشياخ","عين السلطان","واد الجمعة","الماين","الروينة","زدين","بئر ولد خليفة","برج الأمير خالد","طارق بن زياد","بطحية","بلعاص","الحسانية"],
+    "44 - عين الدفلى": ["عين الدفلى","بن علال","مليانة","bومدفع","الحسينية","خميس مليانة","سيدي الأخضر","عين البنيان","عين التركي","حمام ريغة","بوراشد","جليدة","جمعة أولاد الشيخ","عريب","العامرة","المخاطرية","العطاف","تبركانين","عين بويحيى","العبادية","تاشتة زقاغة","برbوش","جندل","وادي الشرفاء","عين الاشياخ","عين السلطان","واد الجمعة","الماين","الروينة","زدين","bئر ولد خليفة","برج الأمير خالد","طارق بن زياد","بطحية","بلعاص","الحسانية"],
     "45 - النعامة": ["النعامة","عين بن خليل","البيوض","المشرية","عين الصفراء","تيوت","سفيسيفة","جنين بورزق","مغرار","عسلة","القصدير","مكمن بن عمار"],
     "46 - عين تموشنت": ["عين تموشنت","سيدي بن عدة","شنتوف","حمام بوحجر","الحساسنة","وادي برقش","عين الأربعاء","وادي الصباح","سيدي بومدين","تامزورة","شعبة اللحم","المالح","أولاد الكيحل","تارقة","بوزجار","العامرية","المساعيد","حاسي الغلة","أولاد بوجمعة","أغلال","عين الكيحل","عين الطلبة","عقب الليل","بني صاف","الأمير عبد القادر","سيدي صافي","ولهاصة الغرابة","سيدي ورياش"],
-    "47 - غرداية": ["غرداية","ضاية بن ضحوة","بريان","متليلي","سبسب","القرارة","زلفانة","بونورة","العطف","المنصورة"],
-    "48 - غليزان": ["بن داود","غليزان","لحلاف","مرجة سيدي عابد","واريزان","وادي رهيو","الحمادنة","وادي الجمعة","بني زنطيس","مديونة","سيدي أمحمد بن علي","عمي موسى","الحاسي","الولجة","أولاد يعيش","بني درقن","دار بن عبد الله","زمورة","جديوية","حمري","أولاد سيدي الميهوب","بلعسل بوزقزة","المطمر","سيدي  خطاب","سيدي امحمد بن عودة","عين طارق","حد الشكالة","القطار","مازونة","عين الرحمة","القلعة","سيدي سعادة","يلل","الرمكة","سوق الحد","منداس","وادي السلام","سيدي لزرق"],
+    "47 - غرداية": ["غرداية","ضاية بن ضحوة","بريان","متليلي","سبسب","القرارة","زلفانة","bونورة","العطف","المنصورة"],
+    "48 - غليزان": ["بن داود","غليزان","لحلاف","مرجة سيدي عابد","واريزان","وادي رهيو","الحمادنة","وادي الجمعة","bني زنطيس","مديونة","سيدي أمحمد بن علي","عمي موسى","الحاسي","الولجة","أولاد يعيش","bني درقن","دار بن عبد الله","زمورة","جديوية","حمري","أولاد سيدي الميهوب","بلعسل بوزقزة","المطمر","سيدي  خطاب","سيدي امحمد بن عودة","عين طارق","حد الشكالة","القطار","مازونة","عين الرحمة","القلعة","سيدي سعادة","يلل","الرمكة","سوق الحد","منداس","وادي السلام","سيدي لزرق"],
     "49 - تيميمون": ["شروين","أولاد عيسى","طالمين","أولاد السعيد","تيميمون","قصر قدور","تنركوك","أوقروت","دلدول","المطارفة"],
     "50 - برج باجي مختار": ["برج باجي مختار","تيمياوين"],
     "51 - أولاد جلال": ["الشعيبة","الدوسن","أولاد جلال","بسباس","رأس الميعاد","سيدي  خالد"],
@@ -718,7 +2230,7 @@
     "55 - تقرت": ["النزلة","تبسبست","تقرت","الزاوية العابدية","العالية","الحجيرة","بن ناصر","المنقر","الطيبات","بلدة اعمر","تماسين","المقارين","سيدي سليمان"],
     "56 - جانت": ["برج الحواس","جانت"],
     "57 - المغير": ["المغير","أم الطيور","سيدي خليل","سطيل","جامعة","المرارة","سيدي عمران","تندلة"],
-    "58 - المنيعة": ["المنيعة","حاسي القارة","حاسي الفحل"]
+    "58 - المنيعة": ["المننيعة","حاسي القارة","حاسي الفحل"]
   };
 
   const communeSelect = document.getElementById('o-commune');
@@ -763,41 +2275,6 @@
   }
   wilayaSelect.addEventListener('change', updateDeliveryPrice);
   deliverySelect.addEventListener('change', updateDeliveryPrice);
-
-  orderForm.addEventListener('submit', function(e){
-    e.preventDefault();
-    const name = document.getElementById('o-name').value.trim();
-    const phone = document.getElementById('o-phone').value.trim();
-    const wilaya = document.getElementById('o-wilaya').value;
-    const method = document.getElementById('o-delivery').value;
-    const methodLabel = method === 'domicile' ? 'توصيل للمنزل' : (method === 'stopdesk' ? 'استلام من المكتب' : '');
-    const address = document.getElementById('o-address').value.trim();
-    const commune = document.getElementById('o-commune') ? document.getElementById('o-commune').value : '';
-    const item = document.getElementById('o-item').value.trim();
-    const size = document.getElementById('o-size').value;
-    const qty = document.getElementById('o-qty').value;
-    const notes = document.getElementById('o-notes').value.trim();
-    const price = wilaya && method ? wilayaPrices[wilaya][method] : undefined;
-    const priceStr = (price === null || price === undefined) ? 'À confirmer' : (price.toLocaleString() + ' DA');
-
-    let msg = `Nouvelle commande depuis le site My Moda Batna :\n`;
-    msg += `Nom : ${name}\n`;
-    msg += `Téléphone : ${phone}\n`;
-    msg += `Wilaya : ${wilaya}\n`;
-    msg += `Mode de livraison : ${methodLabel}\n`;
-    msg += `Adresse : ${address}\n`;
-    if(commune){ msg += `Commune : ${commune}\n`; }
-    msg += `Frais de livraison : ${priceStr}\n`;
-    msg += `Article : ${item}\n`;
-    if(selectedPhotoUrl){ msg += `Photo : ${selectedPhotoUrl}\n`; }
-    msg += `Taille : ${size}\n`;
-    msg += `Quantité : ${qty}\n`;
-    if(notes){ msg += `Remarques : ${notes}\n`; }
-
-    const storeNumber = "213780252131";
-    const url = `https://wa.me/${storeNumber}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
-  });
 </script>
 
 </body>
