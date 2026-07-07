@@ -1234,15 +1234,15 @@
               <label for="p-img">رابط صورة المنتج (أو اختر صورة افتراضية)</label>
               <select id="p-img-preset" style="margin-bottom: 0.5rem;">
                 <option value="">رابط صورة مخصص...</option>
-                <option value="assets/p1.jpg">الصورة الافتراضية 1 (2Pac)</option>
-                <option value="assets/p2.jpg">الصورة الافتراضية 2 (Dallas)</option>
-                <option value="assets/p3.jpg">الصورة الافتراضية 3 (Killswitch)</option>
-                <option value="assets/p4.jpg">الصورة الافتراضية 4 (Disaster)</option>
-                <option value="assets/p5.jpg">الصورة الافتراضية 5 (Eagle)</option>
-                <option value="assets/p6.jpg">الصورة الافتراضية 6 (Menteng)</option>
-                <option value="assets/p7.jpg">الصورة الافتراضية 7 (Doobie)</option>
-                <option value="assets/p8.jpg">الصورة الافتراضية 8 (Skull)</option>
-                <option value="assets/p9.jpg">الصورة الافتراضية 9 (Snake-D)</option>
+                <option value="https://mymodabatna-rgb.github.io/mymodabatna/assets/p1.jpg">الصورة الافتراضية 1 (2Pac)</option>
+                <option value="https://mymodabatna-rgb.github.io/mymodabatna/assets/p2.jpg">الصورة الافتراضية 2 (Dallas)</option>
+                <option value="https://mymodabatna-rgb.github.io/mymodabatna/assets/p3.jpg">الصورة الافتراضية 3 (Killswitch)</option>
+                <option value="https://mymodabatna-rgb.github.io/mymodabatna/assets/p4.jpg">الصورة الافتراضية 4 (Disaster)</option>
+                <option value="https://mymodabatna-rgb.github.io/mymodabatna/assets/p5.jpg">الصورة الافتراضية 5 (Eagle)</option>
+                <option value="https://mymodabatna-rgb.github.io/mymodabatna/assets/p6.jpg">الصورة الافتراضية 6 (Menteng)</option>
+                <option value="https://mymodabatna-rgb.github.io/mymodabatna/assets/p7.jpg">الصورة الافتراضية 7 (Doobie)</option>
+                <option value="https://mymodabatna-rgb.github.io/mymodabatna/assets/p8.jpg">الصورة الافتراضية 8 (Skull)</option>
+                <option value="https://mymodabatna-rgb.github.io/mymodabatna/assets/p9.jpg">الصورة الافتراضية 9 (Snake-D)</option>
                 <option value="https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500">صورة تيشيرت أسود عام</option>
                 <option value="https://images.unsplash.com/photo-1562157873-818bc0726f68?w=500">صورة تيشيرت أبيض عام</option>
               </select>
@@ -1319,16 +1319,46 @@
   import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, collection, addDoc, updateDoc, deleteDoc, onSnapshot, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-  // Configuration Firebase globale
-  const firebaseConfig = JSON.parse(__firebase_config);
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+  // Safe Environment Firebase Checker
+  let app, auth, db;
+  let isFirebaseConfigured = false;
+  const appId = typeof __app_id !== 'undefined' ? __app_id : 'mymodabatna';
+
+  try {
+    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+      const firebaseConfig = JSON.parse(__firebase_config);
+      if (firebaseConfig && firebaseConfig.apiKey) {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+        isFirebaseConfigured = true;
+      }
+    }
+  } catch (err) {
+    console.warn("Firebase not configured or invalid credentials. Defaulting to LocalStorage Mode.", err);
+  }
+
+  // Local Storage Database Fallback Mock
+  const localDB = {
+    getProducts: () => {
+      const prods = localStorage.getItem('mymoda_local_prods');
+      return prods ? JSON.parse(prods) : [];
+    },
+    saveProducts: (prods) => {
+      localStorage.setItem('mymoda_local_prods', JSON.stringify(prods));
+    },
+    getOrders: () => {
+      const orders = localStorage.getItem('mymoda_local_orders');
+      return orders ? JSON.parse(orders) : [];
+    },
+    saveOrders: (orders) => {
+      localStorage.setItem('mymoda_local_orders', JSON.stringify(orders));
+    }
+  };
 
   // State Management
   let currentUser = null;
-  let currentPassword = "batna05"; // Default Password
+  let currentPassword = localStorage.getItem('mymoda_admin_pwd') || "batna05"; // Default Password fallback
   let ordersList = [];
   let productsList = [];
   let unsubscribeOrders = null;
@@ -1337,9 +1367,9 @@
   // Global variables to support custom confirmation callback
   let activeConfirmCallback = null;
 
-  // Toast notifications trigger
   function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer');
+    if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
     toast.innerHTML = `
@@ -1362,13 +1392,12 @@
     });
   }
 
-  // Pure custom confirm handler (Avoid alert/confirm)
+  // Pure custom confirm handler (Avoid alert/confirm blockages)
   function showConfirmModal(title, message, onConfirm) {
     const modal = document.getElementById('customConfirmModal');
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
     modal.classList.add('active');
-    
     activeConfirmCallback = onConfirm;
   }
 
@@ -1385,8 +1414,13 @@
     activeConfirmCallback = null;
   });
 
-  // --- Auth & Initializing DB ---
   const initAuth = async () => {
+    if (!isFirebaseConfigured) {
+      currentUser = { uid: "local-admin-uid", isAnonymous: true };
+      await loadAdminPassword();
+      startRealtimeProductsListener();
+      return;
+    }
     try {
       if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
         await signInWithCustomToken(auth, __initial_auth_token);
@@ -1395,119 +1429,130 @@
       }
     } catch (err) {
       console.error("Firebase Auth Error:", err);
-      showToast("خطأ في الاتصال بقاعدة البيانات الأمنية.", "info");
+      showToast("تشغيل غير متصل بالإنترنت (Local Mode Active)", "info");
+      currentUser = { uid: "local-admin-uid", isAnonymous: true };
+      await loadAdminPassword();
+      startRealtimeProductsListener();
     }
   };
 
-  onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
-    if (user) {
-      await loadAdminPassword();
-      // Start listening to the products on storefront and manager right after Auth is ready
-      startRealtimeProductsListener();
-    }
-  });
-
-  // Load secret password from DB
-  async function loadAdminPassword() {
-    if (!currentUser) return;
-    try {
-      const pwdDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
-      const docSnap = await getDoc(pwdDocRef);
-      if (docSnap.exists()) {
-        currentPassword = docSnap.data().password || "batna05";
-      } else {
-        await setDoc(pwdDocRef, { password: "batna05" });
+  if (isFirebaseConfigured) {
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      if (user) {
+        await loadAdminPassword();
+        startRealtimeProductsListener();
       }
-    } catch (e) {
-      console.error("Password read error: ", e);
+    });
+  }
+
+  // Load secret password from DB/LocalStorage
+  async function loadAdminPassword() {
+    if (isFirebaseConfigured && currentUser) {
+      try {
+        const pwdDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
+        const docSnap = await getDoc(pwdDocRef);
+        if (docSnap.exists()) {
+          currentPassword = docSnap.data().password || "batna05";
+        } else {
+          await setDoc(pwdDocRef, { password: "batna05" });
+        }
+      } catch (e) {
+        console.error("Firebase Password load failed:", e);
+      }
+    } else {
+      currentPassword = localStorage.getItem('mymoda_admin_pwd') || "batna05";
     }
   }
 
   initAuth();
 
-  // --- Dynamic Products Listener & Seed Database helper ---
   function startRealtimeProductsListener() {
-    if (!currentUser) return;
-    const productsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+    if (isFirebaseConfigured) {
+      const productsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+      unsubscribeProducts = onSnapshot(productsCollectionRef, async (snapshot) => {
+        productsList = [];
+        snapshot.forEach(doc => {
+          productsList.push({ id: doc.id, ...doc.data() });
+        });
 
-    unsubscribeProducts = onSnapshot(productsCollectionRef, async (snapshot) => {
-      productsList = [];
-      snapshot.forEach(doc => {
-        productsList.push({ id: doc.id, ...doc.data() });
+        if (productsList.length === 0) {
+          await seedDefaultProducts();
+          return;
+        }
+
+        productsList.sort((a, b) => {
+          const timeA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+          const timeB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+          return timeB - timeA;
+        });
+
+        renderStorefrontWall();
+        renderManagerProductsList();
+      }, (error) => {
+        console.error("Products Firestore error:", error);
+        loadLocalProductsFallback();
       });
-
-      // If database is completely empty (first run), let's seed it with the default 9 t-shirts
-      if (productsList.length === 0) {
-        await seedDefaultProducts();
-        return; // The snapshot listener will trigger again right after seeding
-      }
-
-      // Sort products by creation date locally
-      productsList.sort((a, b) => {
-        const timeA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
-        const timeB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
-        return timeB - timeA;
-      });
-
-      renderStorefrontWall();
-      renderManagerProductsList();
-    }, (error) => {
-      console.error("Products subscription error:", error);
-      showToast("فشل في تحميل المنتجات من السيرفر.", "info");
-    });
+    } else {
+      loadLocalProductsFallback();
+    }
   }
 
-  // Seeding initial 9 clothes products dynamically
+  function loadLocalProductsFallback() {
+    productsList = localDB.getProducts();
+    if (productsList.length === 0) {
+      // Default clothes catalog
+      const defaultList = [
+        { id: "p1", name: "تيشيرت 2Pac Thug Life", desc: "طبعة كلاسيكية بيضاء، من أشهر التصاميم راب.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p1.jpg", status: "available" },
+        { id: "p2", name: "طبعة دالاس فينتاج", desc: "تصميم ريترو بستايل الصحف القديمة والحصان البري.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p2.jpg", status: "available" },
+        { id: "p3", name: "طبعة Killswitch Engage", desc: "جمجمة عسكرية بألوان حمراء نارية، ستايل ميتال.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p3.jpg", status: "available" },
+        { id: "p4", name: "طبعة Disaster الملكية", desc: "جمجمة بتاج ذهبي وخط قوطي فاخر.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p4.jpg", status: "available" },
+        { id: "p5", name: "طبعة النسر الأسطوري", desc: "نسر أمريكي بسلاسل مكسورة، ستايل دراجات نارية.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p5.jpg", status: "available" },
+        { id: "p6", name: "طبعة Menteng Dalam", desc: "تصميم كوميدي بألوان حمراء وزرقاء صاخبة.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p6.jpg", status: "available" },
+        { id: "p7", name: "طبعة Doobie Brothers", desc: "نسر يحلق فوق الجبال، ستايل روك كلاسيكي.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p7.jpg", status: "available" },
+        { id: "p8", name: "طبعة Skull Society", desc: "هيكل عظمي على دراجة نارية بألوان ليلية مرعبة.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p8.jpg", status: "available" },
+        { id: "p9", name: "طبعة Snake-D", desc: "جمجمة روك بنيران وثعبان وقيثارة، ألوان صاخبة.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p9.jpg", status: "available" }
+      ];
+      localDB.saveProducts(defaultList);
+      productsList = defaultList;
+    }
+    renderStorefrontWall();
+    renderManagerProductsList();
+  }
+
   async function seedDefaultProducts() {
     const productsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
     const defaultList = [
-      { name: "تيشيرت 2Pac Thug Life", desc: "طبعة كلاسيكية بيضاء، من أشهر التصاميم راب.", price: 2500, photoUrl: "assets/p1.jpg", status: "available" },
-      { name: "طبعة دالاس فينتاج", desc: "تصميم ريترو بستايل الصحف القديمة والحصان البري.", price: 2500, photoUrl: "assets/p2.jpg", status: "available" },
-      { name: "طبعة Killswitch Engage", desc: "جمجمة عسكرية بألوان حمراء نارية، ستايل ميتال.", price: 2500, photoUrl: "assets/p3.jpg", status: "available" },
-      { name: "طبعة Disaster الملكية", desc: "جمجمة بتاج ذهبي وخط قوطي فاخر.", price: 2500, photoUrl: "assets/p4.jpg", status: "available" },
-      { name: "طبعة النسر الأسطوري", desc: "نسر أمريكي بسلاسل مكسورة، ستايل دراجات نارية.", price: 2500, photoUrl: "assets/p5.jpg", status: "available" },
-      { name: "طبعة Menteng Dalam", desc: "تصميم كوميدي بألوان حمراء وزرقاء صاخبة.", price: 2500, photoUrl: "assets/p6.jpg", status: "available" },
-      { name: "طبعة Doobie Brothers", desc: "نسر يحلق فوق الجبال، ستايل روك كلاسيكي.", price: 2500, photoUrl: "assets/p7.jpg", status: "available" },
-      { name: "طبعة Skull Society", desc: "هيكل عظمي على دراجة نارية بألوان ليلية مرعبة.", price: 2500, photoUrl: "assets/p8.jpg", status: "available" },
-      { name: "طبعة Snake-D", desc: "جمجمة روك بنيران وثعبان وقيثارة، ألوان صاخبة.", price: 2500, photoUrl: "assets/p9.jpg", status: "available" }
+      { name: "تيشيرت 2Pac Thug Life", desc: "طبعة كلاسيكية بيضاء، من أشهر التصاميم راب.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p1.jpg", status: "available" },
+      { name: "طبعة دالاس فينتاج", desc: "تصميم ريترو بستايل الصحف القديمة والحصان البري.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p2.jpg", status: "available" },
+      { name: "طبعة Killswitch Engage", desc: "جمجمة عسكرية بألوان حمراء نارية، ستايل ميتال.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p3.jpg", status: "available" },
+      { name: "طبعة Disaster الملكية", desc: "جمجمة بتاج ذهبي وخط قوطي فاخر.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p4.jpg", status: "available" },
+      { name: "طبعة النسر الأسطوري", desc: "نسر أمريكي بسلاسل مكسورة، ستايل دراجات نارية.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p5.jpg", status: "available" },
+      { name: "طبعة Menteng Dalam", desc: "تصميم كوميدي بألوان حمراء وزرقاء صاخبة.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p6.jpg", status: "available" },
+      { name: "طبعة Doobie Brothers", desc: "نسر يحلق فوق الجبال، ستايل روك كلاسيكي.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p7.jpg", status: "available" },
+      { name: "طبعة Skull Society", desc: "هيكل عظمي على دراجة نارية بألوان ليلية مرعبة.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p8.jpg", status: "available" },
+      { name: "طبعة Snake-D", desc: "جمجمة روك بنيران وثعبان وقيثارة، ألوان صاخبة.", price: 2500, photoUrl: "https://mymodabatna-rgb.github.io/mymodabatna/assets/p9.jpg", status: "available" }
     ];
 
     try {
       for (const item of defaultList) {
-        await addDoc(productsCollectionRef, {
-          ...item,
-          createdAt: serverTimestamp()
-        });
+        await addDoc(productsCollectionRef, { ...item, createdAt: serverTimestamp() });
       }
-      showToast("تم تهيئة قائمة الملابس الافتراضية بنجاح.", "success");
     } catch (e) {
       console.error("Error seeding DB:", e);
     }
   }
 
-  // --- Render Storefront dynamic wall ---
   function renderStorefrontWall() {
     const wallContainer = document.getElementById('collection-wall');
+    if (!wallContainer) return;
     wallContainer.innerHTML = '';
-
-    if (productsList.length === 0) {
-      wallContainer.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; color: var(--grey); padding: 3rem;">
-          لا توجد ملابس معروضة حاليًا في المتجر.
-        </div>
-      `;
-      return;
-    }
 
     productsList.forEach(product => {
       const isSoldOut = product.status === 'sold_out';
       const teeDiv = document.createElement('div');
       teeDiv.className = 'tee';
-      teeDiv.setAttribute('data-name', product.name);
-      teeDiv.setAttribute('data-photourl', product.photoUrl || '');
       
-      // Fallback shirt image if broken or local not loaded
       const imageTagHtml = `<img src="${product.photoUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500'}" alt="${escapeHtml(product.name)}" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500';">`;
 
       teeDiv.innerHTML = `
@@ -1523,7 +1568,6 @@
         </div>
       `;
 
-      // Order click listener inside storefront
       if (!isSoldOut) {
         teeDiv.querySelector('.order-this').addEventListener('click', function() {
           const name = product.name;
@@ -1543,15 +1587,10 @@
     });
   }
 
-  // --- Render Manager dynamic products list ---
   function renderManagerProductsList() {
     const container = document.getElementById('managerProductsList');
+    if (!container) return;
     container.innerHTML = '';
-
-    if (productsList.length === 0) {
-      container.innerHTML = `<p style="color:var(--grey)">لا توجد ملابس مسجلة حتى الآن.</p>`;
-      return;
-    }
 
     productsList.forEach(product => {
       const row = document.createElement('div');
@@ -1577,19 +1616,17 @@
         </div>
       `;
 
-      // Status change listener for dynamic product
       row.querySelector('.p-status-toggle').addEventListener('change', async function() {
         const prodId = this.getAttribute('data-id');
         const newStatus = this.value;
         await updateProductStatus(prodId, newStatus);
       });
 
-      // Delete listener for dynamic product
       row.querySelector('.p-delete-btn').addEventListener('click', function() {
         const prodId = this.getAttribute('data-id');
         showConfirmModal(
-          "حذف الملابس",
-          `هل أنت متأكد من حذف "${product.name}" نهائيًا من قاعدة بيانات المتجر؟`,
+          "حذف قطعة الملابس",
+          `هل أنت متأكد من حذف "${product.name}" نهائيًا من متجرك؟`,
           async () => {
             await deleteProduct(prodId);
           }
@@ -1600,33 +1637,42 @@
     });
   }
 
-  // Update dynamic product status
   async function updateProductStatus(id, status) {
-    if (!currentUser) return;
-    try {
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', id);
-      await updateDoc(docRef, { status: status });
-      showToast("تم تحديث حالة المنتج بنجاح.");
-    } catch (e) {
-      console.error(e);
-      showToast("فشل تحديث حالة المنتج.", "info");
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', id);
+        await updateDoc(docRef, { status: status });
+        showToast("تم تحديث حالة المنتج بنجاح.");
+      } catch (e) {
+        showToast("فشل تحديث حالة المنتج.", "info");
+      }
+    } else {
+      productsList = productsList.map(p => p.id === id ? { ...p, status } : p);
+      localDB.saveProducts(productsList);
+      showToast("تم تحديث الحالة محليًا.");
+      renderStorefrontWall();
+      renderManagerProductsList();
     }
   }
 
-  // Delete dynamic product
   async function deleteProduct(id) {
-    if (!currentUser) return;
-    try {
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', id);
-      await deleteDoc(docRef);
-      showToast("تم حذف المنتج بنجاح من المتجر.");
-    } catch (e) {
-      console.error(e);
-      showToast("فشل في حذف المنتج.", "info");
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'products', id);
+        await deleteDoc(docRef);
+        showToast("تم حذف المنتج بنجاح.");
+      } catch (e) {
+        showToast("فشل في حذف المنتج.", "info");
+      }
+    } else {
+      productsList = productsList.filter(p => p.id !== id);
+      localDB.saveProducts(productsList);
+      showToast("تم حذف المنتج محليًا.");
+      renderStorefrontWall();
+      renderManagerProductsList();
     }
   }
 
-  // Form handling: Add new Dynamic Product
   const addProductForm = document.getElementById('addProductForm');
   const pImgPreset = document.getElementById('p-img-preset');
   const pImgCustom = document.getElementById('p-img-custom');
@@ -1639,8 +1685,6 @@
 
   addProductForm.addEventListener('submit', async function(e) {
     e.preventDefault();
-    if (!currentUser) return;
-
     const name = document.getElementById('p-name').value.trim();
     const price = parseInt(document.getElementById('p-price').value) || 2500;
     const desc = document.getElementById('p-desc').value.trim();
@@ -1652,31 +1696,34 @@
       price,
       desc,
       photoUrl,
-      status,
-      createdAt: serverTimestamp()
+      status
     };
 
-    try {
-      const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
-      await addDoc(collectionRef, newProduct);
-      showToast("تمت إضافة المنتج الجديد وعرضه في المتجر بنجاح !");
+    if (isFirebaseConfigured) {
+      try {
+        const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'products');
+        await addDoc(collectionRef, { ...newProduct, createdAt: serverTimestamp() });
+        showToast("تمت إضافة المنتج الجديد للشبكة بنجاح !");
+        addProductForm.reset();
+        pImgCustom.value = '';
+      } catch (err) {
+        showToast("فشل الحفظ الإلكتروني.", "info");
+      }
+    } else {
+      const generatedId = "local_p_" + Date.now();
+      productsList.unshift({ id: generatedId, ...newProduct });
+      localDB.saveProducts(productsList);
+      showToast("تم حفظ التعديل محليًا !");
       addProductForm.reset();
       pImgCustom.value = '';
-    } catch (err) {
-      console.error(err);
-      showToast("حدث خطأ أثناء إضافة المنتج.", "info");
+      renderStorefrontWall();
+      renderManagerProductsList();
     }
   });
 
-  // --- Order Form Submission & Real-time Order save ---
   const orderForm = document.getElementById('orderForm');
   orderForm.addEventListener('submit', async function(e) {
     e.preventDefault();
-    if (!currentUser) {
-      showToast("قاعدة البيانات غير متصلة بعد، يرجى المحاولة بعد لحظات.", "info");
-      return;
-    }
-
     const name = document.getElementById('o-name').value.trim();
     const phone = document.getElementById('o-phone').value.trim();
     const wilaya = document.getElementById('o-wilaya').value;
@@ -1705,16 +1752,10 @@
       qty,
       notes,
       deliveryPrice: price || 0,
-      status: 'pending',
-      createdAt: serverTimestamp()
+      status: 'pending'
     };
 
-    try {
-      const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
-      await addDoc(collectionRef, orderData);
-      
-      showToast("تم تسجيل طلبك بنجاح وقيد المراجعة!");
-
+    const triggerWhatsAppRedirect = () => {
       let msg = `Nouvelle commande depuis le site My Moda Batna :\n`;
       msg += `Nom : ${name}\n`;
       msg += `Téléphone : ${phone}\n`;
@@ -1735,14 +1776,27 @@
       
       orderForm.reset();
       document.getElementById('clearSelected').click();
-    } catch (err) {
-      console.error(err);
-      showToast("حدث خطأ أثناء إرسال طلبك. يرجى التواصل معنا على واتساب مباشرة.", "info");
+    };
+
+    if (isFirebaseConfigured) {
+      try {
+        const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
+        await addDoc(collectionRef, { ...orderData, createdAt: serverTimestamp() });
+        showToast("تم تسجيل طلبك وقيد المراجعة!");
+        triggerWhatsAppRedirect();
+      } catch (err) {
+        showToast("فشل التسجيل السحابي، يتم الإرسال المباشر للواتساب.", "info");
+        triggerWhatsAppRedirect();
+      }
+    } else {
+      const savedOrders = localDB.getOrders();
+      savedOrders.unshift({ id: "local_ord_" + Date.now(), ...orderData, createdAtRaw: new Date().toISOString() });
+      localDB.saveOrders(savedOrders);
+      showToast("تم حفظ طلبك محليًا وبنجاح!");
+      triggerWhatsAppRedirect();
     }
   });
 
-
-  // --- Unique Hidden Admin Portal Router & Hashes ---
   const adminLoginWrapper = document.getElementById('adminLoginWrapper');
   const dashboardWrapper = document.getElementById('dashboardWrapper');
   const storefrontView = document.getElementById('storefront-view');
@@ -1752,7 +1806,6 @@
     if (isSecretAdminRoute) {
       // Hide standard storefront
       storefrontView.style.display = 'none';
-      // If we are logged in, show dashboard. Otherwise, show password input screen.
       const sessionLoggedIn = sessionStorage.getItem('mymoda_admin_logged') === 'true';
       if (sessionLoggedIn) {
         adminLoginWrapper.classList.remove('active');
@@ -1761,7 +1814,13 @@
       } else {
         dashboardWrapper.classList.remove('active');
         adminLoginWrapper.classList.add('active');
-        document.getElementById('adminPassword').focus();
+        setTimeout(() => {
+          const pwdField = document.getElementById('adminPassword');
+          if (pwdField) {
+            pwdField.value = '';
+            pwdField.focus();
+          }
+        }, 50);
       }
     } else {
       // Normal storefront routing
@@ -1772,8 +1831,11 @@
     }
   }
 
+  // Bind immediate routing events
   window.addEventListener('hashchange', handleRouting);
-  window.addEventListener('DOMContentLoaded', handleRouting);
+  
+  // Call Routing IMMEDIATELY instead of waiting for deferred DOMContentLoaded
+  handleRouting();
 
   // Back to store from login screen
   document.getElementById('backToStoreBtn').addEventListener('click', () => {
@@ -1824,40 +1886,60 @@
     const newPassword = document.getElementById('newAdminPassword').value.trim();
     if (!newPassword) return;
 
-    try {
-      const pwdDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
-      await setDoc(pwdDocRef, { password: newPassword });
+    if (isFirebaseConfigured) {
+      try {
+        const pwdDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'admin');
+        await setDoc(pwdDocRef, { password: newPassword });
+        currentPassword = newPassword;
+        document.getElementById('newAdminPassword').value = '';
+        showToast("تم تحديث كلمة المرور بنجاح !", "success");
+      } catch (err) {
+        showToast("فشل تحديث كلمة المرور سحابيًا.", "info");
+      }
+    } else {
+      localStorage.setItem('mymoda_admin_pwd', newPassword);
       currentPassword = newPassword;
       document.getElementById('newAdminPassword').value = '';
-      showToast("تم تحديث كلمة المرور بنجاح !", "success");
-    } catch (err) {
-      console.error(err);
-      showToast("فشل في تحديث كلمة المرور.", "info");
+      showToast("تم تحديث كلمة المرور محليًا !", "success");
     }
   });
 
-
-  // --- Real-time Live Orders Syncing ---
   function startRealtimeOrdersListener() {
-    if (!currentUser) return;
-    const ordersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
-    
-    unsubscribeOrders = onSnapshot(ordersCollectionRef, (snapshot) => {
-      ordersList = [];
-      snapshot.forEach(doc => {
-        ordersList.push({ id: doc.id, ...doc.data() });
-      });
-      
-      ordersList.sort((a, b) => {
-        const timeA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
-        const timeB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
-        return timeB - timeA;
-      });
+    if (isFirebaseConfigured) {
+      const ordersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
+      unsubscribeOrders = onSnapshot(ordersCollectionRef, (snapshot) => {
+        ordersList = [];
+        snapshot.forEach(doc => {
+          ordersList.push({ id: doc.id, ...doc.data() });
+        });
+        
+        ordersList.sort((a, b) => {
+          const timeA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+          const timeB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+          return timeB - timeA;
+        });
 
-      renderDashboardOrders();
-    }, (error) => {
-      console.error("Orders flow error:", error);
+        renderDashboardOrders();
+      }, (error) => {
+        console.error("Orders firestore error:", error);
+        loadLocalOrdersFallback();
+      });
+    } else {
+      loadLocalOrdersFallback();
+    }
+  }
+
+  function loadLocalOrdersFallback() {
+    const rawOrders = localDB.getOrders();
+    ordersList = rawOrders.map(ord => {
+      return {
+        ...ord,
+        createdAt: {
+          toDate: () => new Date(ord.createdAtRaw || Date.now())
+        }
+      };
     });
+    renderDashboardOrders();
   }
 
   function stopRealtimeOrdersListener() {
@@ -1912,6 +1994,7 @@
 
   function renderOrdersTable() {
     const tableBody = document.getElementById('ordersTableBody');
+    if (!tableBody) return;
     tableBody.innerHTML = '';
 
     const filteredOrders = ordersList.filter(order => {
@@ -1973,14 +2056,12 @@
         </td>
       `;
 
-      // Status change inside orders table
       tr.querySelector('.o-status-select').addEventListener('change', async function() {
         const orderId = this.getAttribute('data-id');
         const newStatus = this.value;
         await updateOrderStatus(orderId, newStatus);
       });
 
-      // WhatsApp follow up
       tr.querySelector('.wa-btn').addEventListener('click', function() {
         let msg = `مرحبًا ${order.name}، معك متجر My Moda Batna للتيشيرتات والملابس الحصرية.\n`;
         msg += `بخصوص طلبك لتيشيرت : *${order.item}* (المقاس : ${order.size}).\n`;
@@ -1994,7 +2075,6 @@
         window.open(`https://wa.me/${clientPhone}?text=${encodeURIComponent(msg)}`, '_blank');
       });
 
-      // Secure Delete inside orders table (No confirm dialog)
       tr.querySelector('.delete-btn').addEventListener('click', function() {
         const orderId = this.getAttribute('data-id');
         showConfirmModal(
@@ -2011,26 +2091,42 @@
   }
 
   async function updateOrderStatus(id, status) {
-    if (!currentUser) return;
-    try {
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'orders', id);
-      await updateDoc(docRef, { status: status });
-      showToast("تم تحديث حالة الطلب.");
-    } catch (e) {
-      console.error(e);
-      showToast("فشل تحديث الطلب.", "info");
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'orders', id);
+        await updateDoc(docRef, { status: status });
+        showToast("تم تحديث حالة الطلب.");
+      } catch (e) {
+        showToast("فشل تحديث الطلب.", "info");
+      }
+    } else {
+      ordersList = ordersList.map(ord => ord.id === id ? { ...ord, status } : ord);
+      const toStore = ordersList.map(ord => {
+        return { ...ord, createdAtRaw: ord.createdAt.toDate().toISOString() };
+      });
+      localDB.saveOrders(toStore);
+      showToast("تم تحديث حالة الطلب محليًا.");
+      renderDashboardOrders();
     }
   }
 
   async function deleteOrder(id) {
-    if (!currentUser) return;
-    try {
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'orders', id);
-      await deleteDoc(docRef);
-      showToast("تم حذف الطلب نهائيًا.");
-    } catch (e) {
-      console.error(e);
-      showToast("خطأ أثناء حذف الطلب.", "info");
+    if (isFirebaseConfigured) {
+      try {
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'orders', id);
+        await deleteDoc(docRef);
+        showToast("تم حذف الطلب نهائيًا.");
+      } catch (e) {
+        showToast("خطأ أثناء حذف الطلب.", "info");
+      }
+    } else {
+      ordersList = ordersList.filter(ord => ord.id !== id);
+      const toStore = ordersList.map(ord => {
+        return { ...ord, createdAtRaw: ord.createdAt.toDate().toISOString() };
+      });
+      localDB.saveOrders(toStore);
+      showToast("تم حذف الطلب محليًا.");
+      renderDashboardOrders();
     }
   }
 
@@ -2050,19 +2146,21 @@
       .slice(0, 5);
 
     const topProductsContainer = document.getElementById('topProductsContainer');
-    topProductsContainer.innerHTML = '';
-    if (topProducts.length === 0) {
-      topProductsContainer.innerHTML = `<span class="eyebrow" style="color:var(--grey);">لا توجد مبيعات</span>`;
-    } else {
-      topProducts.forEach(([name, count]) => {
-        const itemEl = document.createElement('div');
-        itemEl.className = 'rank-item';
-        itemEl.innerHTML = `
-          <span class="name">${escapeHtml(name)}</span>
-          <span class="count">${count} قطعة</span>
-        `;
-        topProductsContainer.appendChild(itemEl);
-      });
+    if (topProductsContainer) {
+      topProductsContainer.innerHTML = '';
+      if (topProducts.length === 0) {
+        topProductsContainer.innerHTML = `<span class="eyebrow" style="color:var(--grey);">لا توجد مبيعات</span>`;
+      } else {
+        topProducts.forEach(([name, count]) => {
+          const itemEl = document.createElement('div');
+          itemEl.className = 'rank-item';
+          itemEl.innerHTML = `
+            <span class="name">${escapeHtml(name)}</span>
+            <span class="count">${count} قطعة</span>
+          `;
+          topProductsContainer.appendChild(itemEl);
+        });
+      }
     }
 
     const topWilayas = Object.entries(wilayaCounts)
@@ -2070,19 +2168,21 @@
       .slice(0, 5);
 
     const topWilayasContainer = document.getElementById('topWilayasContainer');
-    topWilayasContainer.innerHTML = '';
-    if (topWilayas.length === 0) {
-      topWilayasContainer.innerHTML = `<span class="eyebrow" style="color:var(--grey);">لا توجد ولايات</span>`;
-    } else {
-      topWilayas.forEach(([name, count]) => {
-        const itemEl = document.createElement('div');
-        itemEl.className = 'rank-item';
-        itemEl.innerHTML = `
-          <span class="name">${escapeHtml(name.replace(/^\d+\s-\s/, ""))}</span>
-          <span class="count">${count} طلب</span>
-        `;
-        topWilayasContainer.appendChild(itemEl);
-      });
+    if (topWilayasContainer) {
+      topWilayasContainer.innerHTML = '';
+      if (topWilayas.length === 0) {
+        topWilayasContainer.innerHTML = `<span class="eyebrow" style="color:var(--grey);">لا توجد ولايات</span>`;
+      } else {
+        topWilayas.forEach(([name, count]) => {
+          const itemEl = document.createElement('div');
+          itemEl.className = 'rank-item';
+          itemEl.innerHTML = `
+            <span class="name">${escapeHtml(name.replace(/^\d+\s-\s/, ""))}</span>
+            <span class="count">${count} طلب</span>
+          `;
+          topWilayasContainer.appendChild(itemEl);
+        });
+      }
     }
   }
 
@@ -2092,7 +2192,6 @@
   }
 
 </script>
-
 
 <script>
   // Dynamic Scroll revealing script
@@ -2174,63 +2273,63 @@
 
   const wilayaCommunes = {
     "01 - أدرار": ["أدرار","بودة","أولاد أحمد تيمي","رقان","سالي","السبع","تسابيت","إن زغمير","زاوية كنتة","اقبلي","أولف","تيمقتن","تيت","فنوغيل","تامنطيط","تامست"],
-    "02 - الشلف": ["الشلف","أم الدروع","سنجاس","سيدي عبد الرحمن","سيدي عكاشة","تنس","بني بوعتاب","الكريمية","حرشون","الظهرة","تاوقريت","بني حواء","بريرة","وادي قوسين","الشطية","الأبيض مجاجة","أولاد فارس","بوقادير","وادي سلي","الصبحة","بنايرية","bوزغاية","الزبوجة","أبو الحسن","تاجنة","تلعصة","المرسى","مصدق","بني راشد","وادي الفضة","أولاد عباس","الحجاج","أولاد بن عبد القادر","عين مران","الهرانفة"],
+    "02 - الشلف": ["الشلف","أم الدروع","سنجاس","سيدي عبد الرحمن","سيدي عكاشة","تنس","بني بوعتاب","الكريمية","حرشون","الظهرة","تاوقريت","بني حواء","بريرة","وادي قوسين","الشطية","الأبيض مجاجة","أولاد فارس","bوقادير","وادي سلي","الصبحة","بنايرية","bوزغاية","الزبوجة","أبو الحسن","تاجنة","تلعصة","المرسى","مصدق","بني راشد","وادي الفضة","أولاد عباس","الحجاج","أولاد بن عبد القادر","عين مران","الهرانفة"],
     "03 - الأغواط": ["الأغواط","بن ناصر بن شهرة","قصر الحيران","العسافية","سيدي مخلوف","حاسي الدلاعة","حاسي الرمل","عين ماضي","الحويطة","الخنق","تاجموت","تاجرونة","عين سيدي علي","البيضاء","قلتة سيدي سعد","بريدة","الحاج مشري","تاويالة","الغيشة","أفلو","سبقاق","سيدي بوزيد","وادي مرة","وادي مزي"],
-    "04 - أم البواقي": ["عين الزيتون","أم البواقي","عين البيضاء","بريش","الزرق","عين مليلة","أولاد قاسم","أولاد حملة","العامرية","سيقوس","عين ببوش","عين الديس","الضلعة","الجازية","عين كرشة","الحرملية","هنشير تومغني","فكيرينة","وادي نيني","بئر الشهداء","أولاد زواي","سوق نعمان","قصر الصباحي","بحير الشرقي","البلالة","مسكيانة","الرحية","عين فكرون","الفجوج بوغرارة سعودي"],
-    "05 - باتنة": ["باتنة","فسديس","وادي الشعبة","حيدوسة","قصر بلزمة","مروانة","وادي الماء","لازرو","سريانة","زانة البيضاء","منعة","تغرغار","عين ياقوت","bومية","جرمة","المعذر","عيون العصافير","تازولت","bومقر","نقاوس","سفيان","أريس","تيغانمين","عين جاسر","الحاسي","سقانة","تيلاطو","فم الطوب","إشمول","إينوغيسن","بوزينة","لارباع","بولهيلات","الشمرة","بريكة","بيطام","إمدوكل","عزيل عبد القادر","الجزار","أولاد عمار","غسيرة","كيمل","تكوت","عين التوتة","بني فضالة الحقانية","معافة","أولاد عوف","شير","وادي الطاقة","ثنية العابد","أولاد فاضل","تيمقاد","القصبات","القيقبة","أولاد سلام","الرحبات","رأس العيون","تالخمت","لمسان","أولاد سي سليمان","تاكسلانت"],
-    "06 - بجاية": ["بجاية","وادي غير","أميزور","بني جليل","فرعون","سمعون","تيمزريت","مالبو","سوق لإثنين","تامريجت","بوخليفة","تالة حمزة","تيشي","أيت رزين","إغيل علي","أيت إسماعيل","درقينة","تاسكريوت","أوقاس","تيزي نبربر","أدكار","bني كسيلة","تاوريرت إغيل","أقبو","شlaطة","اغرم","تامقرة","أمالو","بوحمزة","مسيسنة","صدوق","بني مليكش","بو جليل","تازمالت","أكفادو","شميني","سوق اوفلا","طيبان","برباشة","كنديرة","أوزلاقن","الفلاي","سيدي عياد","سيدي عيش","تيفرة","تينبدار","القصر","فناية الماثن","توجة","ذراع القايد","خراطة","بني معوش"],
-    "07 - بسكرة": ["بسكرة","الحاجب","عين الناقة","شتمة","الحوش","سيدي عقبة","مشونش","الفيض","خنقة سيدي ناجي","المزيرعة","زريبة الوادي","عين زعطوط","القنطرة","الوطاية","برانيس","جمورة","برج بن عزوز","بوشقرون","ليشانة","طولقة","ليوة","مخادمة","مليلي","أوماش","أورلال","الغروس","فوغالة"],
-    "08 - بشار": ["بشار","بوكايس","لحمر","موغل","القنادسة","المريجة","تبلبالة","تاغيت","العبادلة","عرق فراج","مشرع هواري بومدين","بني ونيف"],
-    "09 - البليدة": ["البليدة","بوعرفة","بوعينان","الشبلي","بني تامو","بن خليل","وادي العلايق","بني مراد","الشريعة","أولاد يعيش","العفرون","وادي جر","عين الرمانة","الشفة","موزاية","جبابرة","مفتاح","بوفاريك","قرواو","الصومعة","الأربعاء","صوحان","بوقرة","حمام ملوان","اولاد سلامة"],
-    "10 - البويرة": ["عين الترك","أيت لعزيز","البويرة","المقراني","سوق الخميس","أعمر","جباحية","قادرية","حيزر","تاغزوت","بودربالة","بوكرم","قرومة","الأخضرية","معلة","زبربر","الهاشمية","وادي البردي","برج أوخريص","الحجرة الزرقاء","مزدور","تاقديit","أهل القصر","بشلول","العجيبة","الأسنام","أولاد راشد","عين الحجر","عين العلوي","عين بسام","بئر غبالو","الخبوزية","روراوة","أغبالو","شرفة","حنيف","أمشدالة","سحاريج","آث  منصور","الدشمية","ديرة","الحاكمية","المعمورة","ريدان","سور الغزلان"],
+    "04 - أم البواقي": ["عين الزيتون","أم البواقي","عين البيضاء","بريش","الزرق","عين مليلة","أولاد قاسم","أولاد حملة","العامرية","سيقوس","عين ببوش","عين الديس","الضلعة","الجازية","عين كرشة","الحرملية","هنشير تومغني","فكيرينة","وادي نيني","bئر الشهداء","أولاد زواي","سوق نعمان","قصر الصباحي","بحير الشرقي","البلالة","مسكيانة","الرحية","عين فكرون","الفجوج بوغرارة سعودي"],
+    "05 - باتنة": ["باتنة","فسديس","وادي الشعبة","حيدوسة","قصر بلزمة","مروانة","وادي الماء","لازرو","سريانة","زانة البيضاء","منعة","تغرغار","عين ياقوت","bومية","جرمة","المعذر","عيون العصافير","تازولت","bومقر","نقاوس","سفيان","أريس","تيغانمين","عين جاسر","الحاسي","سقانة","تيلاطو","فم الطوب","إشمول","إينوغيسن","bوزينة","لارباع","bولهيلات","الشمرة","بريكة","بيطام","إمدوكل","عزيل عبد القادر","الجزار","أولاد عمار","غسيرة","كيمل","تكوت","عين التوتة","بني فضالة الحقانية","معافة","أولاد عوف","شير","وادي الطاقة","ثنية العابد","أولاد فاضل","تيمقاد","القصبات","القيقبة","أولاد سلام","الرحبات","رأس العيون","تالخمت","لمسان","أولاد سي سليمان","تاكسلانت"],
+    "06 - بجاية": ["bجاية","وادي غير","أميزور","bني جليل","فرعون","سمعون","تيمزريت","مالبو","سوق لإثنين","تامريجت","bوخليفة","تالة حمزة","تيشي","أيت رزين","إغيل علي","أيت إسماعيل","درقينة","تاسكريوت","أوقاس","تيزي نبربر","أدكار","bني كسيلة","تاوريرت إغيل","أقبو","شlaطة","اغرم","تامقرة","أمالو","bوحمزة","مسيسنة","صدوق","بني مليكش","bو جليل","تازمالت","أكفادو","شميني","سوق اوفلا","طيبان","برباشة","كنديرة","أوزلاقن","الفلاي","سيدي عياد","سيدي عيش","تيفرة","تينبدار","القصر","فناية الماثن","توجة","ذراع القايد","خراطة","بني معوش"],
+    "07 - بسكرة": ["بسكرة","الحاجب","عين الناقة","شتمة","الحوش","سيدي عقبة","مشونش","الفيض","خنقة سيدي ناجي","المزيرعة","زريبة الوادي","عين زعطوط","القنطرة","الوطاية","برانيس","جمورة","برج بن عزوز","bوشقوف","ليشانة","طولقة","ليوة","مخادمة","مليلي","أوماش","أورلال","الغروس","فوغالة"],
+    "08 - بشار": ["بشار","bوكايس","لحمر","موغل","القنادسة","المريجة","تبلبالة","تاغيت","العبادلة","عرق فراج","مشرع هواري بومدين","بني ونيف"],
+    "09 - البليدة": ["البليدة","bوعرفة","bوعينان","الشبلي","بني تامو","بن خليل","وادي العلايق","بني مراد","الشريعة","أولاد يعيش","العفرون","وادي جر","عين الرمانة","الشفة","موزاية","جبابرة","مفتاح","bوفاريك","قرواو","الصومعة","الأربعاء","صوحان","bوقرة","حمام ملوان","اولاد سلامة"],
+    "10 - البويرة": ["عين الترك","أيت لعزيز","البويرة","المقراني","سوق الخميس","أعمر","جباحية","قادرية","حيزر","تاغزوت","bودربالة","bوكرم","قرومة","الأخضرية","معلة","زبربر","الهاشمية","وادي البردي","برج أوخريص","الحجرة الزرقاء","مزدور","تاقديit","أهل القصر","بشلول","العجيبة","الأسنام","أولاد راشد","عين الحجر","عين العلوي","عين بسام","bئر غبالو","الخبوزية","روراوة","أغبالو","شرفة","حنيف","أمشدالة","سحاريج","آث  منصور","الدشمية","ديرة","الحاكمية","المعمورة","ريدان","سور الغزلان"],
     "11 - تمنراست": ["عين امقل","تمنراست","ابلسة","أدلس","تاظروك"],
-    "12 - تبسة": ["تبسة","بئر العاتر","العقلة المالحة","الشريعة","ثليجان","بوخضرة","العوينات","فركان","نقرين","بئر مقدم","قريقر","الحمامات","بكارية","بولحاف الدير","الكويف","bئر الذهب","مرسط","بجن","المزرعة","العقلة","سطح قنطيس","عين الزرقاء","المريج","الونزة","الماء الابيض","الحويجبات","أم علي","صفصاف الوسرى"],
-    "13 - تلمسان": ["تلمسان","عين النحالة","عين تالوت","عين يوسف","بني وارسوس","الفحول","الرمشي","سبعة شيوخ","بوحلو","صبرة","دار يغمراسن","الغزوات","السواحلية","تيانت","بني صميل","وادي الخضر","أولاد ميمون","بني بهدل","بني سنوس","العزايل","باب العسة","السواني","سوق الثلاثاء","عين فتاح","عين الكبيرة","فلاوسن","بن سكران","سيدي العبدلي","الحناية","أولاد رياح","زناتة","حمام بوغرارة","مغنية","العريشة","القور","سبدو","بني بوسعيد","سيدي مجاهد","مرسى بن مهيدي","مسيردة الفواقة","جبالة","ندرومة","البويهي","سيدي الجيلالي","بني خلاد","هنين","عين فزة","عمير","شتوان","عين غرابة","بني مستر","منصورة","تيرني بني هديل"],
+    "12 - تبسة": ["تبسة","bئر العاتر","العقلة المالحة","الشريعة","ثليجان","bوخضرة","العوينات","فركان","نقرين","bئر مقدم","قريقر","الحمامات","بكارية","bولحاف الدير","الكويف","bئر الذهب","مرسط","bجن","المزرعة","العقلة","سطح قنطيس","عين الزرقاء","المريج","الونزة","الماء الابيض","الحويجبات","أم علي","صفصاف الوسرى"],
+    "13 - تلمسان": ["تلمسان","عين النحالة","عين تالوت","عين يوسف","بني وارسوس","الفحول","الرمشي","سبعة شيوخ","bوحلو","صبرة","دار يغمراسن","الغزوات","السواحلية","تيانت","بني صميل","وادي الخضر","أولاد ميمون","bني بهدل","بني سنوس","العزايل","باب العسة","السواني","سوق الثلاثاء","عين فتاح","عين الكبيرة","فلاوسن","بن سكران","سيدي العبدلي","الحناية","أولاد رياح","زناتة","حمام بوغرارة","مغنية","العريشة","القور","سبدو","bني بوسعيد","سيدي مجاهد","مرسى بن مهيدي","مسيردة الفواقة","جبالة","ندرومة","البويهي","سيدي الجيلالي","بني خلاد","هنين","عين فزة","عمير","شتوان","عين غرابة","bني مستر","منصورة","تيرني بني هديل"],
     "14 - تيارت": ["تيارت","مدروسة","ملاكو","سيدي بختي","عين الذهب","شحيمة","النعيمة","عين بوشقيف","دحموني","قرطوفة","الرحوية","عين دزاريت","مهدية","الناظورة","السبعين","الفايجة","سي عبد الغني","السوقر","توسنينة","مغيلة","السبت","سيدي حسني","عين الحديد","فرندة","تخمرت","عين كرمس","جبيلات الرصفاء","مادنة","مدريسة","سيدي عبد الرحمن","قصر الشلالة","سرغين","زمالة  الأمير عبد القادر","وادي ليلي","سيدي علي ملال","تيدة","جيلالي بن عمار","مشرع الصفا","تاقدمت","bوقرة","حمادية","الرشايقة"],
-    "15 - تيزي وزو": ["تيزي وزو","أبي يوسف","عين الحمام","أيت يحيى","اقبيل","بوجيمة","ماكودة","عين الزاوية","أيت يحي موسى","ذراع الميزان","فريقات","مكيرة","تيزي غنيف","إفــرحــونان","إيلـيــلتـن","إمســوحال","عزازقة","فريحة","إيفيغاء","إعــكورن","زكري","أيت عقـواشة","إيرجـــن","الأربعــاء ناث إيراثن","أيت  أومالو","تيزي راشد","أيت عيسى ميمون","واقنون","تيمـيزار","معـــاتقة","سوق الإثنين","أيت محمود","بنــــي زمنزار","بني عيسي","بني دوالة","بني زيكــي","bوزقــن","إيجــار","إيلولة أومـــالو","أقني قغران","أيت بــوادو","واضية","تيزي نثلاثة","أغريب","أيت شافع","أقرو","أزفون","إفليـــسن","ميزرانـــة","تيقـزيرت","أسي يوسف","بوغني","bونوح","مشطراس","ذراع بن خدة","سيدي نعمان","تادمايت","تيرمتين","أيت بومهدي","أيت تودرت","واسيف","أيت خليلي","مقــلع","صوامـــع","بني يني","إبودرارن","يطــافن"],
-    "16 - الجزائر": ["الجزائر الوسطى","المدنية","المرادية","سيدي امحمد","باب الوادي","بولوغين بن زيري","القصبة","وادي قريش","الرايس حميدو","بئر مراد رايس","بئر خادم","جسر قسنطينة","حيدرة","السحاولة","ابن عكنون","بني مسوس","بوزريعة","الابيار","باش جراح","بوروبة","الحراش","وادي السمار","براقي","الكاليتوس","سيدي موسى","المغارية","حسين داي","القبة","محمد بلوزداد","عين طاية","باب الزوار","برج البحري","برج الكيفان","الدار البيضاء","المرسى","المحمدية","بئر توتة","اولاد شبل","تسالة المرجة","هراوة","رغاية","الرويبة","المعالمة","الرحمانية","سويدانية","سطاوالي","زرالدة","بابا حسن","الدويرة","الدرارية","العاشور","الخرايسية","عين بنيان","الشراقة","دالي ابراهيم","الحمامات","اولاد فايت"],
-    "17 - الجلفة": ["الجلفة","عين معبد","حاسي بحبح","حاسي العش","زعفران","عمورة","فيض البطمة","أم العظام","bنهار","بيرين","عين الشهداء","دويس","الادريسية","دلدول","قطارة","مسعد","سد الرحال","سلمانة","الخميس","حاسي فدول","سيدي لعجال","عين فقه","بويرة الأحداب","حد الصحاري","دار الشيوخ","مليليحة","سيدي بايزيد","بن يعقوب","الشارف","القديد","عين الإبل","مجبارة","تعظميت","زكار","عين وسارة","قرنيني"],
-    "18 - جيجل": ["جيجل","العوانة","سلمى بن زيادة","أراقن سويسي","زيامة منصورية","bوسيف أولاد عسكر","الشحنة","الامير عبد القادر","وجانة","الطاهير","برج الطهر","الشقفة","القنار نشفي","سيدي عبد العزيز","الميلية","أولاد يحيى خدروش","أولاد رابح","سيدي معروف","غبالة","السطارة","bوراوي بلهادف","الجمعة بني حبيبي","العنصر","خيري واد عجول","بودريعة بني  ياجيس","جيملة","قاوس","تاكسنة"],
-    "19 - سطيف": ["سطيف","عين الكبيرة","الدهامشة","أولاد عدوان","عين السبت","بني عزيز","معاوية","بلاعة","بئر العرش","الولجة","تاشودة","بابور","سرج الغول","قجال","أولاد صابر","بازر سكرة","العلمة","قلتة زرقاء","بني فودة","جميلة","عين لقراج","بني شبانة","بني ورتيلان","bني موحلي","عين عباسة","عين أرنات","أوريسيا","مزلوق","عموشة","واد البارد","تيزي نبشار","عين ولمان","قلال","قصر الابطال","أولاد سي أحمد","أيت nوال مزادة","ايت تيزي","بوعنداس","bوسلام","حمام السخنة","الطاية","التلة","بوطالب","الحامة","أولاد تبان","الرصفة","صالح باي","عين أزال","عين الحجر","بيضاء برج","bئر حدادة","قنزات","حربيل","عين الروى","بني وسين","bوقاعة","ذراع قبيلة","حمام قرقور","ماوكلان","تالة إيفاسن"],
-    "20 - سعيدة": ["سعيدة","عين الحجر","مولاي العربي","سيدي احمد","دوي ثابت","يوب","هونت","أولاد خالد","سيدي عمر","سيدي بوبكر","عين السخونة","الحساسنة","المعمورة","عين السلطان","أولاد إبراهيم","تيرسين"],
-    "21 - سكيكدة": ["فلفلة","حمادي كرومة","سكيكدة","عين زويت","بوشطاطة","الحدائق","عين شرشار","عزابة","جندل سعدي محمد","الغدير","السبت","بكوش لخضر","بن عزوز","المرسى","بني زيد","الشرايع","القل","خناق مايو","وادي الزهور","أولاد عطية","قنواع","الزيتونة","الحروش","مجاز الدشيش","أولاد حبابة","صالح بو الشعور","زردازة","عين بوزيان","بني ولبان","سيدي مزغيش","بني بشير","رمضان جمال","بين الويدان","الكركرة","تمالوس","عين قشرة","الولجة بولبلوط","أم الطوب"],
-    "22 - سيدي بلعباس": ["سيدي بلعباس","عين الثريد","السهالة الثورة","تسالة","بلعربي","مصطفى بن ابراهيم","تلموني","زروالة","الضاية","مزاورو","تغاليمت","تلاغ","عين قادة","لمطار","سيدي علي بوسيدي","سيدي دحو الزاير","bئر الحمام","مرحوم","سيدي شعيب","العمارنة","سيدي خالد","سيدي لحسن","سيدي يعقوب","بن عشيبة شلية","حاسي دحو","وادي سفيون","تنيرة","عين تندمين","الحصيبة","مولاي سليسن","مرين","وادي تاوريرة","تاودموت","تفسور","وادي السبع","راس الماء","رجم دموش","عين البرد","مكدرة","سيدي ابراهيم","سيدي حمادوش","عين أدن","بوجبهة البرج","مسيد","سفيزف","bضرابين المقراني","بن باديس","شيطوان البلايلة","حاسي زهانة","بوخنفيس","سيدي علي بن يوب","طابية"],
-    "23 - عنابة": ["عنابة","سرايدي","برحال","واد العنب","التريعات","الحجار","سيدي عمار","البوني","عين الباردة","الشرفة","العلمة","شطايبي"],
-    "24 - قالمة": ["بن جراح","قالمة","عين رقادة","برج صباط","وادي الزناتي","عين العربي","عين مخلوف","تاملوكة","عين صندل","بوحشانة","لخزارة","بلخير","بني مزلين","بومهرة أحمد","جبالة الخميسي","قلعة بوصبع","نشماية","بوحمدان","حمام دباغ","الركنية","الدهوارة","حمام النبايل","وادي الشحم","عين بن بيضاء","bوشقوف","مجاز الصفاء","وادي فراغة","بوعاتي محمود","الفجوج","هيليوبوليس","مجاز عمار","هواري بومدين","رأس العقبة","سلاوة عنونة"],
-    "25 - قسنطينة": ["قسنطينة","ديدوش مراد","حامة بوزيان","بني حميدان","زيغود يوسف","عين السمارة","الخروب","أولاد رحمون","عين عبيد","أبن باديس الهرية","ابن زياد","بوجريو مسعود"],
-    "26 - المدية": ["ذراع السمار","المدية","تمسقيدة","بن شكاو","الحمدانية","وزرة","تيزي مهدي","عين بوسيف","العوينات","الكاف الاخضر","أولاد امعرف","سيدي دامد","بعطة","العمارية","أولاد إبراهيم","بئر بن عابد","القلب الكبير","سدراية","عين اقصير","شلالة العذاورة","شنيقل","تفراوت","bوشراحيل","خمس جوامع","سيدي نعمان","عزيز","دراق","أم الجليل","جواب","سيدي زهار","سيدي زيان","السواقي","قصر البخاري","مفاتحة","السانق","العزيزية","مغراوة","ميهوب","بوعيش","بوغزول","الشهبونية","حناشة","عوامري","وادي حربيل","بوعيشون","أولاد بوعشرة","سي المحجوب","بني سليمان","بوسكن","سيدي الربيع","البرواقية","أولاد دايد","الربعية","مجبر","سغوان","ثلاث دوائر","الزبيرية","العيساوية","الحوضان","مزغنة","تابلاط","بوغار","أولاد عنتر","أولاد هلال"],
-    "27 - مستغانم": ["مستغانم","عين نويسي","فرناقة","الحسيان (بني ياحي","حاسي ماماش","مزغران","ستيدية","عين تادلس","وادي الخير","سيدي بلعطار","سور","عين بودينار","خير الدين","صيادة","أولاد مع الله","سيدي علي","تزقايت","بن عبد المالك رمضان","حجاج","سيدي لخضر","عشعاشة","خضرة","نكمارية","أولاد بوغالم","bوقيراط","صفصاف","سيرات","السوافلية","عين سيدي الشريف","منصورة","ماسرة","الطواهرية"],
-    "28 - المسيلة": ["المسيلة","حمام الضلعة","ونوغة","أولاد منصور","تارمونت","المعاضيد","المطارفة","أولاد عدي لقبالة","أولاد دراج","السوامع","الحوامد","خبانة","مسيف","شلال","خطوطي سد الجير","معاريف","أولاد ماضي","عين الخضراء","بلعايبة","برهوم","دهاهنة","مقرة","بني يلمان","bوطي السايح","سيدي عيسى","عين الحجل","سيدي هجرس","بوسعادة","الهامل","ولتام","بن زوه","أولاد سيدي ابراهيم","سيدي عامر","تامسة","بن سرور","محمد بوضياف","أولاد سليمان","زرزور","عين الملح","عين فارس","عين الريش","bئر فضة","سيدي امحمد","امجدل","مناعة","جبل مساعد","سليم"],
-    "29 - معسكر": ["معسكر","بوحنيفية","القطنة","حسين","القرط","فروحة","تيزي","السهايلية","سيدي قادة","تيغنيف","الحشم","نسمط","زلامطة","عين فراح","وادي الأبطال","سيدي عبد الجبار","غريس","ماقضة","ماوسة","المطمور","سيدي بوسعيد","البرج","المنور","خلوية","عين فكان","عين أفرص","قرجوم","وادي التاغية","عوف","بنيان","غروس","عين فارس","المأمونية","بوهني","الشرفاء","سيق","العلايمية","عقاز","رأس عين عميروش","القعدة","زهانة","الغمري","فراقيق","مقطع الدوز","المحمدية","سجرارة","سيدي عبد المومن"],
+    "15 - تيزي وزو": ["تيزي وزو","أبي يوسف","عين الحمام","أيت يحيى","اقبيل","bوجيمة","ماكودة","عين الزاوية","أيت يحي موسى","ذراع الميزان","فريقات","مكيرة","تيزي غنيف","إفــرحــونان","إيلـيــلتـن","إمســوحال","عزازقة","فريحة","إيفيغاء","إعــكورن","زكري","أيت عقـواشة","إيرجـــن","الأربعــاء ناث إيراثن","أيت  أومالو","تيزي راشد","أيت عيسى ميمون","واقنون","تيمـيزار","معـــاتقة","سوق الإثنين","أيت محمود","bنــــي زمنزار","بني عيسي","بني دوالة","بني زيكــي","bوزقــن","إيجــار","إيلولة أومـــالو","أقني قغران","أيت bــوادو","واضية","تيزي نثلاثة","أغريب","أيت شافع","أقرو","أزفون","إفليـــسن","ميزرانـــة","تيقـزيرت","أسي يوسف","bوغني","bونوح","مشطراس","ذراع بن خدة","سيدي نعمان","تادمايت","تيرمتين","أيت bومهدي","أيت تودرت","واسيف","أيت خليلي","مقــلع","صوامـــع","بني يني","إبودرارن","يطــافن"],
+    "16 - الجزائر": ["الجزائر الوسطى","المدنية","المرادية","سيدي امحمد","bاب الوادي","bولوغين بن زيري","القصبة","وادي قريش","الرايس حميدو","bئر مراد رايس","bئر خادم","جسر قسنطينة","حيدرة","السحاولة","ابن عكنون","بني مسوس","bوزريعة","الابيار","bاش جراح","bوروبة","الحراش","وادي السمار","bراقي","الكاليتوس","سيدي موسى","المغارية","حسين داي","القبة","محمد بلوزداد","عين طاية","bاب الزوار","برج البحري","برج الكيفان","الدار البيضاء","المرسى","المحمدية","bئر توتة","اولاد شبل","تسالة المرجة","هراوة","رغاية","الرويبة","المعالمة","الرحمانية","سويدانية","سطاوالي","زرالدة","bابا حسن","الدويرة","الدرارية","العاشور","الخرايسية","عين بنيان","الشراقة","دالي ابراهيم","الحمامات","اولاد فايت"],
+    "17 - الجلفة": ["الجلفة","عين معبد","حاسي بحبح","حاسي العش","زعفران","عمورة","فيض البطمة","أم العظام","bنهار","bيرين","عين الشهداء","دويس","الادريسية","دلدول","قطارة","مسعد","سد الرحال","سلمانة","الخميس","حاسي فدول","سيدي لعجال","عين فقه","bويرة الأحداب","حد الصحاري","دار الشيوخ","مليليحة","سيدي بايزيد","بن يعقوب","الشارف","القديد","عين الإبل","مجبارة","تعظميت","زكار","عين وسارة","قرنيني"],
+    "18 - جيجل": ["جيجل","العوانة","سلمى بن زيادة","أراقن سويسي","زيامة منصورية","bوسيف أولاد عسكر","الشحنة","الامير عبد القادر","وجانة","الطاهير","برج الطهر","الشقفة","القنار نشفي","سيدي عبد العزيز","الميلية","أولاد يحيى خدروش","أولاد رابح","سيدي معروف","غبالة","السطارة","bوراوي بلهادف","الجمعة بني حبيبي","العنصر","خيري واد عجول","bودريعة بني  ياجيس","جيملة","قاوس","تاكسنة"],
+    "19 - سطيف": ["سطيف","عين الكبيرة","الدهامشة","أولاد عدوان","عين السبت","بني عزيز","معاوية","bلاعة","bئر العرش","الولجة","تاشودة","bابور","سرج الغول","قجال","أولاد صابر","bازر سكرة","العلمة","قلتة زرقاء","بني فودة","جميلة","عين لقراج","بني شبانة","بني ورتيلان","bني موحلي","عين عباسة","عين أرنات","أوريسيا","مزلوق","عموشة","واد البارد","تيزي نبشار","عين ولمان","قلال","قصر الابطال","أولاد سي أحمد","أيت nوال مزادة","ايت تيزي","bوعنداس","bوسلام","حمام السخنة","الطاية","التلة","bوطالب","الحامة","أولاد تبان","الرصفة","صالح باي","عين أزال","عين الحجر","bيضاء برج","bئر حدادة","قنزات","حربيل","عين الروى","بني وسين","bوقاعة","ذراع قبيلة","حمام قرقور","ماوكلان","تالة إيفاسن"],
+    "20 - سعيدة": ["سعيدة","عين الحجر","مولاي العربي","سيدي احمد","دوي ثابت","يوب","هونت","أولاد خالد","سيدي عمر","سيدي bوبكر","عين السخونة","الحساسنة","المعمورة","عين السلطان","أولاد إبراهيم","تيرسين"],
+    "21 - سكيكدة": ["فلفلة","حمادي كرومة","سكيكدة","عين زويت","bوشطاطة","الحدائق","عين شرشار","عزابة","جندل سعدي محمد","الغدير","السبت","bكوش لخضر","بن عزوز","المرسى","بني زيد","الشرايع","القل","خناق مايو","وادي الزهور","أولاد عطية","قنواع","الزيتونة","الحروش","مجاز الدشيش","أولاد حبابة","صالح bو الشعور","زردازة","عين بوزيان","بني ولبان","سيدي مزغيش","بني بشير","رمضان جمال","bين الويدان","الكركرة","تمالوس","عين قشرة","الولجة bولبلوط","أم الطوب"],
+    "22 - سيدي بلعباس": ["سيدي بلعباس","عين الثريد","السهالة الثورة","تسالة","bلعربي","مصطفى بن ابراهيم","تلموني","زروالة","الضاية","مزاورو","تغاليمت","تلاغ","عين قادة","لمطار","سيدي علي بوسيدي","سيدي دحو الزاير","bئر الحمام","مرحوم","سيدي شعيب","العمارنة","سيدي خالد","سيدي لحسن","سيدي يعقوب","بن عشيبة شلية","حاسي دحو","وادي سفيون","تنيرة","عين تندمين","الحصيبة","مولاي سليسن","مرين","وادي تاوريرة","تاودموت","تفسور","وادي السبع","راس الماء","رجم دموش","عين البرد","مكدرة","سيدي ابراهيم","سيدي حمادوش","عين أدن","bوجبهة البرج","مسيد","سفيزف","bضرابين المقراني","بن باديس","شيطوان البلايلة","حاسي زهانة","bوخنفيس","سيدي علي بن يوب","طابية"],
+    "23 - عنابة": ["عنابة","سرايدي","bرحال","واد العنب","التريعات","الحجار","سيدي عمار","البوني","عين الباردة","الشرفة","العلمة","شطايبي"],
+    "24 - قالمة": ["بن جراح","قالمة","عين رقادة","برج صباط","وادي الزناتي","عين العربي","عين مخلوف","تاملوكة","عين صندل","bوحشانة","لخزارة","bلخير","بني مزلين","bومهرة أحمد","جبالة الخميسي","قلعة bوصبع","نشماية","bوحمدان","حمام دباغ","الركنية","الدهوارة","حمام النبايل","وادي الشحم","عين بن بيضاء","bوشقوف","مجاز الصفاء","وادي فراغة","bوعاتي محمود","الفجوج","هيليوبوليس","مجاز عمار","هواري بومدين","رأس العقبة","سلاوة عنونة"],
+    "25 - قسنطينة": ["قسنطينة","ديدوش مراد","حامة بوزيان","bني حميدان","زيغود يوسف","عين السمارة","الخروب","أولاد رحمون","عين عبيد","أبن باديس الهرية","ابن زياد","bوجريو مسعود"],
+    "26 - المدية": ["ذراع السمار","المدية","تمسقيدة","بن شكاو","الحمدانية","وزرة","تيزي مهدي","عين بوسيف","العوينات","الكاف الاخضر","أولاد امعرف","سيدي دامد","بعطة","العمارية","أولاد إبراهيم","bئر بن عابد","القلب الكبير","سدراية","عين اقصير","شلالة العذاورة","شنيقل","تفراوت","bوشراحيل","خمس جوامع","سيدي نعمان","عزيز","دراق","أم الجليل","جواب","سيدي زهار","سيدي زيان","السواقي","قصر البخاري","مفاتحة","السانق","العزيزية","مغراوة","ميهوب","bوعيش","bوغزول","الشهبونية","حناشة","عوامري","وادي حربيل","bوعيشون","أولاد بوعشرة","سي المحجوب","بني سليمان","bوسكن","سيدي الربيع","البرواقية","أولاد دايد","الربعية","مجبر","سغوان","ثلاث دوائر","الزبيرية","العيساوية","الحوضان","مزغنة","تابلاط","bوغار","أولاد عنتر","أولاد هلال"],
+    "27 - مستغانم": ["مستغانم","عين نويسي","فرناقة","الحسيان (بني ياحي","حاسي ماماش","مزغران","ستيدية","عين تادلس","وادي الخير","سيدي bلعطار","سور","عين bودينار","خير الدين","صيادة","أولاد مع الله","سيدي علي","تزقايت","بن عبد المالك رمضان","حجاج","سيدي لخضر","عشعاشة","خضرة","نكمارية","أولاد bوغالم","bوقيراط","صفصاف","سيرات","السوافلية","عين سيدي الشريف","منصورة","ماسرة","الطواهرية"],
+    "28 - المسيلة": ["المسيلة","حمام الضلعة","ونوغة","أولاد منصور","تارمونت","المعاضيد","المطارفة","أولاد عدي لقبالة","أولاد دراج","السوامع","الحوامد","خبانة","مسيف","شلال","خطوطي سد الجير","معاريف","أولاد ماضي","عين الخضراء","bلعايبة","برهوم","دهاهنة","مقرة","بني يلمان","bوطي السايح","سيدي عيسى","عين الحجل","سيدي هجرس","bوسعادة","الهامل","ولتام","بن زوه","أولاد سيدي ابراهيم","سيدي عامر","تامسة","بن سرور","محمد bوضياف","أولاد سليمان","زرزور","عين الملح","عين فارس","عين الريش","bئر فضة","سيدي امحمد","امجدل","مناعة","جبل مساعد","سليم"],
+    "29 - معسكر": ["معسكر","bوحنيفية","القطنة","حسين","القرط","فروحة","تيزي","السهايلية","سيدي قادة","تيغنيف","الحشم","نسمط","زلامطة","عين فراح","وادي الأبطال","سيدي عبد الجبار","غريس","ماقضة","ماوسة","المطمور","سيدي bوسعيد","البرج","المنور","خلوية","عين فكان","عين أفرص","قرجوم","وادي التاغية","عوف","بنيان","غروس","عين فارس","المأمونية","bوهني","الشرفاء","سيق","العلايمية","عقاز","رأس عين عميروش","القعدة","زهانة","الغمري","فراقيق","مقطع الدوز","المحمدية","سجرارة","سيدي عبد المومن"],
     "30 - ورقلة": ["ورقلة","الرويسات","انقوسة","حاسي مسعود","عين البيضاء","حاسي بن عبد الله","سيدي خويلد","البرمة"],
-    "31 - وهران": ["وهران","بن فريحة","قديل","حاسي مفسوخ","بئر الجير","حاسي بن عقبة","حاسي بونيف","الكرمة","السانية","سيدي الشحمي","أرزيو","سيدي بن يبقى","عين البية","بطيوة","مرسى الحجاج","عين الترك","بوسفر","العنصر","المرسى الكبير","bوفاتيس","البراية","وادي تليلات","طفراوي","عين الكومة","بوتليليس","مسرغين"],
-    "32 - البيض": ["البيض","رقاصة","الشقيق","الكاف الأحمر","بريزينة","كراكدة","الغاسول","الأبيض سيدي الشيخ","عين العراك","اربوات","البنود","بوقطب","الخيثر","توسمولين","شلالة","المحرة","بوسمغون","بوعلام","سيدي عامر","سيدي سليمان","سيدي طيفور","ستيتن"],
+    "31 - وهران": ["وهران","بن فريحة","قديل","حاسي مفسوخ","bئر الجير","حاسي بن عقبة","حاسي bونيف","الكرمة","السانية","سيدي الشحمي","أرزيو","سيدي بن يبقى","عين البية","bطيوة","مرسى الحجاج","عين الترك","bوسفر","العنصر","المرسى الكبير","bوفاتيس","البراية","وادي تليلات","طفراوي","عين الكومة","bوتليليس","مسرغين"],
+    "32 - البيض": ["البيض","رقاصة","الشقيق","الكاف الأحمر","بريزينة","كراكدة","الغاسول","الأبيض سيدي الشيخ","عين العراك","اربوات","البنود","bوقطب","الخيثر","توسمولين","شلالة","المحرة","bوسمغون","bوعلام","سيدي عامر","سيدي سليمان","سيدي طيفور","ستيتن"],
     "33 - إليزي": ["إيليزي","برج عمر إدريس","دبداب","إن أمناس"],
-    "34 - برج بوعريريج": ["برج بوعريرج","عين تسرة","أولاد أبراهم","رأس الوادي","برج زمورة","أولاد دحمان","تسامرت","بن داود","المهير","حرازة","المنصورة","أولاد سيدي ابراهيم","عين تاغروت","تيكستار","bليمور","برج الغدير","العناصر","غيلاسة","تقلعيت","العش","الحمادية","القصور","الرابطة","الياشير","حسناوة","مجانة","ثنية النصر","القلة","جعافرة","الماين","تفرق","بئر قاصد علي","خليل","سيدي أمبارك"],
-    "35 - بومرداس": ["bومرداس","قورصو","تيجلابين","بودواو","بودواو البحري","بوزقزة قدارة","الخروبة","أولاد هداج","برج منايل","جنات","لقاطة","زموري","بغلية","سيدي داود","تاورقة","الناصرية","أولاد عيسى","شعبة العامر","يسر","سي مصطفى","تيمزريت","عمال","بني عمران","سوق الحد","الثنية","أعفير","بن شود","دلس","حمادي","خميس الخشنة","الاربعطاش","أولاد موسى"],
-    "36 - الطارف": ["عين العسل","bوقوس","الطارف","الزيتونة","عين الكومة","بوحجار","حمام بني صالح","وادي الزيتون","بن مهيدي","بريحان","الشط","العيون","القالة","رمل السوق","السوارخ","بوثلجة","الشافية","بحيرة الطيور","شبيطة مختار","شحاني","الذرعـان","عصفور","البسباس","زريزر"],
+    "34 - برج بوعريريج": ["برج بوعريرج","عين تسرة","أولاد أبراهم","رأس الوادي","برج زمورة","أولاد دحمان","تسامرت","بن داود","المهير","حرازة","المنصورة","أولاد سيدي ابراهيم","عين تاغروت","تيكستار","bليمور","برج الغدير","العناصر","غيلاسة","تقلعيت","العش","الحمادية","القصور","الرابطة","الياشير","حسناوة","مجانة","ثنية النصر","القلة","جعافرة","الماين","تفرق","bئر قاصد علي","خليل","سيدي أمبارك"],
+    "35 - بومرداس": ["bومرداس","قورصو","تيجلابين","bودواو","bودواو البحري","bوزقزة قدارة","الخروبة","أولاد هداج","برج منايل","جنات","لقاطة","زموري","bغلية","سيدي داود","تاورقة","الناصرية","أولاد عيسى","شعبة العامر","يسر","سي مصطفى","تيمزريت","عمال","بني عمران","سوق الحد","الثنية","أعفير","بن شود","دلس","حمادي","خميس الخشنة","الاربعطاش","أولاد موسى"],
+    "36 - الطارف": ["عين العسل","bوقوس","الطارف","الزيتونة","عين الكومة","bوحجار","حمام بني صالح","وادي الزيتون","بن مهيدي","bريحان","الشط","العيون","القالة","رمل السوق","السوارخ","bوثلجة","الشافية","bحيرة الطيور","شbيطة مختار","شحاني","الذرعـان","عصفور","البسباس","زريزر"],
     "37 - تندوف": ["أم العسل","تندوف"],
-    "38 - تيسمسيلت": ["أولاد بسام","تيسمسيلت","بني شعيب","بني لحسن","برج بونعامة","سيدي سليمان","سيدي بوتوشنت","ثنية الاحد","bوقائد","الأربعاء","الأزهرية","لرجام","الملعب","سيدي العنتري","تملاحت","برج الأمير عبد القادر","اليوسفية","خميستي","العيون","عماري","المعاصم","سيدي عابد"],
+    "38 - تيسمسيلت": ["أولاد بسام","تيسمسيلت","بني شعيب","بني لحسن","برج bونعامة","سيدي سليمان","سيدي bوتوشنت","ثنية الاحد","bوقائد","الأربعاء","الأزهرية","لرجام","الملعب","سيدي العنتري","تملاحت","برج الأمير عبد القادر","اليوسفية","خميستي","العيون","عماري","المعاصم","سيدي عابد"],
     "39 - الوادي": ["الوادي","كوينين","العقلة","النخلة","الرباح","البياضة","قمار","ورماس","تغزوت","الحمراية","الرقيبة","الدبيلة","حساني عبد الكريم","حاسي خليفة","الطريفاوي","بن  قشة","دوار الماء","الطالب العربي","المقرن","سيدي عون","اميه وانسة","وادي العلندة"],
-    "40 - خنشلة": ["خنشلة","قايس","الرميلة","تاوزيانت","bغاي","الحامة","انسيغة","طامزة","عين الطويلة","متوسة","بوحمامة","شلية","مصارة","يابوس","ششار","جلال","الولجة","خيران","بابار","المحمل","أولاد رشاش"],
-    "41 - سوق أهراس": ["سوق أهراس","عين سلطان","خميسة","سدراتة","الحنانشة","المشروحة","عين الزانة","أولاد إدريس","الدريعة","تاورة","الزعرورية","الحدادة","الخضارة","أولاد مومن","المراهنة","ويلان","سيدي فرج","بئر بوحوش","سافل الويدان","الزوابي","مداوروش","الراقوبة","تيفاش","وادي الكبريت","أم العظايم","ترقالت"],
-    "42 - تيبازة": ["تيبازة","حجوط","مراد","مناصر","الناظور","سيدي عامر","أغبال","قوراية","مسلمون","شرشال","حجرة النص","سيدي غيلاس","سيدي سميان","بني ميلك","الداموس","الأرهاط","دواودة","فوكة","عين تاقورايت","بوهارون","بواسماعيل","خميستي","أحمر العين","بورقيقة","سيدي راشد","الحطاطبة","الشعيبة","القليعة"],
-    "43 - ميلة": ["عين التين","ميلة","سيدي خليفة","فرجيوة","يحي بني قشة","عين الملوك","شلغوم العيد","وادي العثمانية","مشيرة","وادي سقان","التلاغمة","بن يحي عبد الرحمن","أولاد اخلوف","تاجنانت","أحمد راشدي","وادي النجاء","زغاية","بوحاتم","دراحي بوصلاح","الرواشد","تيبرقنت","القرارم قوقة","حمالة","الشيقارة","سيدي مروان","مينار زارزة","تسدان حدادة","اعميرة اراس","ترعي باينان","تسالة لمطاعي"," عين البيضاء أحريش","العياضي برباس"],
-    "44 - عين الدفلى": ["عين الدفلى","بن علال","مليانة","bومدفع","الحسينية","خميس مليانة","سيدي الأخضر","عين البنيان","عين التركي","حمام ريغة","بوراشد","جليدة","جمعة أولاد الشيخ","عريب","العامرة","المخاطرية","العطاف","تبركانين","عين بويحيى","العبادية","تاشتة زقاغة","برbوش","جندل","وادي الشرفاء","عين الاشياخ","عين السلطان","واد الجمعة","الماين","الروينة","زدين","bئر ولد خليفة","برج الأمير خالد","طارق بن زياد","بطحية","بلعاص","الحسانية"],
-    "45 - النعامة": ["النعامة","عين بن خليل","البيوض","المشرية","عين الصفراء","تيوت","سفيسيفة","جنين بورزق","مغرار","عسلة","القصدير","مكمن بن عمار"],
-    "46 - عين تموشنت": ["عين تموشنت","سيدي بن عدة","شنتوف","حمام بوحجر","الحساسنة","وادي برقش","عين الأربعاء","وادي الصباح","سيدي بومدين","تامزورة","شعبة اللحم","المالح","أولاد الكيحل","تارقة","بوزجار","العامرية","المساعيد","حاسي الغلة","أولاد بوجمعة","أغلال","عين الكيحل","عين الطلبة","عقب الليل","بني صاف","الأمير عبد القادر","سيدي صافي","ولهاصة الغرابة","سيدي ورياش"],
-    "47 - غرداية": ["غرداية","ضاية بن ضحوة","بريان","متليلي","سبسب","القرارة","زلفانة","bونورة","العطف","المنصورة"],
-    "48 - غليزان": ["بن داود","غليزان","لحلاف","مرجة سيدي عابد","واريزان","وادي رهيو","الحمادنة","وادي الجمعة","bني زنطيس","مديونة","سيدي أمحمد بن علي","عمي موسى","الحاسي","الولجة","أولاد يعيش","bني درقن","دار بن عبد الله","زمورة","جديوية","حمري","أولاد سيدي الميهوب","بلعسل بوزقزة","المطمر","سيدي  خطاب","سيدي امحمد بن عودة","عين طارق","حد الشكالة","القطار","مازونة","عين الرحمة","القلعة","سيدي سعادة","يلل","الرمكة","سوق الحد","منداس","وادي السلام","سيدي لزرق"],
+    "40 - خنشلة": ["خنشلة","قايس","الرميلة","تاوزيانت","bغاي","الحامة","انسيغة","طامزة","عين الطويلة","متوسة","bوحمامة","شلية","مصارة","يابوس","ششار","جلال","الولجة","خيران","bابار","المحمل","أولاد رشاش"],
+    "41 - سوق أهراس": ["سوق أهراس","عين سلطان","خميسة","سدراتة","الحنانشة","المشروحة","عين الزانة","أولاد إدريس","الدريعة","تاورة","الزعرورية","الحدادة","الخضارة","أولاد مومن","المراهنة","ويلان","sيدي فرج","bئر bوحوش","سافل الويدان","الزوابي","مداوروش","الراقوبة","تيفاش","وادي الكبريت","أم العظايم","ترقالت"],
+    "42 - تيبازة": ["تيبازة","حجوط","مراد","مناصر","الناظور","سيدي عامر","أغبال","قوراية","مسلمون","شرشال","حجرة النص","سيدي غيلاس","سيدي سميان","بني ميلك","الداموس","الأرهاط","دواودة","فوكة","عين تاقورايت","bوهارون","bواسماعيل","خميستي","أحمر العين","bورريقة","سيدي راشد","الحطاطبة","الشعيبة","القليعة"],
+    "43 - ميلة": ["عين التين","ميلة","سيدي خليفة","فرجيوة","يحي بني قشة","عين الملوك","شلغوم العيد","وادي العثمانية","مشيرة","وادي سقان","التلاغمة","بن يحي عبد الرحمن","أولاد اخلوف","تاجنانت","أحمد راشدي","وادي النجاء","زغاية","bوحاتم","دراحي بوصلاح","الرواشد","تيبرقنت","القرارم قوقة","حمالة","الشيقارة","سيدي مروان","مينار زارزة","تسدان حدادة","اعميرة اراس","ترعي bاينان","تسالة لمطاعي"," عين البيضاء أحريش","العياضي bرباس"],
+    "44 - عين الدفلى": ["عين الدفلى","بن علال","مليانة","bومدفع","الحسينية","خميس مليانة","سيدي الأخضر","عين البنيان","عين التركي","حمام ريغة","bوراشد","جليدة","جمعة أولاد الشيخ","عريب","العامرة","المخاطرية","العطاف","تبركانين","عين bويحيى","العبادية","تاشتة زقاغة","bربوش","جندل","وادي الشرفاء","عين الاشياخ","عين السلطان","واد الجمعة","الماين","الروينة","زدين","bئر ولد خليفة","برج الأمير خالد","طارق بن زياد","bطحية","bلعاص","الحسانية"],
+    "45 - النعامة": ["النعامة","عين بن خليل","الbيوض","المشرية","عين الصفراء","تيوت","سفيسيفة","جنين bورزق","مغرار","عسلة","القصدير","مكمن بن عمار"],
+    "46 - عين تموشنت": ["عين تموشنت","سيدي بن عدة","شنتوف","حمام bوحجر","الحساسنة","وادي bرقش","عين الأربعاء","وادي الصباح","سيدي bومدين","تامزورة","شعبة اللحم","المالح","أولاد الكيحل","تارقة","bوزجار","العامرية","المساعيد","حاسي الغلة","أولاد bوجمعة","أغلال","عين الكيحل","عين الطلبة","عقب الليل","بني صاف","الأمير عبد القادر","سيدي صافي","ولهاصة الغرابة","سيدي ورياش"],
+    "47 - غرداية": ["غرداية","ضاية بن ضحوة","bريان","متليلي","سبسب","القرارة","زلفانة","bونورة","العطف","المنصورة"],
+    "48 - غليزان": ["بن داود","غليزان","لحلاف","مرجة سيدي عابد","واريزان","وادي رهيو","الحمادنة","وادي الجمعة","bني زنطيس","مديونة","سيدي أمحمد بن علي","عمي موسى","الحاسي","الولجة","أولاد يعيش","bني درقن","دار بن عبد الله","زمورة","جديوية","حمري","أولاد سيدي الميهوب","bلعسل bوزقزة","المطمر","سيدي  خطاب","سيدي امحمد بن عودة","عين طارق","حد الشكالة","القطار","مازونة","عين الرحمة","القلعة","سيدي سعادة","يلل","الرمكة","سوق الحد","منداس","وادي السلام","سيدي لزرق"],
     "49 - تيميمون": ["شروين","أولاد عيسى","طالمين","أولاد السعيد","تيميمون","قصر قدور","تنركوك","أوقروت","دلدول","المطارفة"],
     "50 - برج باجي مختار": ["برج باجي مختار","تيمياوين"],
-    "51 - أولاد جلال": ["الشعيبة","الدوسن","أولاد جلال","بسباس","رأس الميعاد","سيدي  خالد"],
+    "51 - أولاد جلال": ["الشعيبة","الدوسن","أولاد جلال","bسباس","رأس الميعاد","سيدي  خالد"],
     "52 - بني عباس": ["القصابي","أولاد خضير","بني عباس","تامترت","إقلي","الواتة","بن يخلف","كرزاز","تيمودي"],
     "53 - عين صالح": ["إينغر","عين صالح","فقارة الزوى"],
     "54 - عين قزام": ["عين قزام","تين زواتين"],
-    "55 - تقرت": ["النزلة","تبسبست","تقرت","الزاوية العابدية","العالية","الحجيرة","بن ناصر","المنقر","الطيبات","بلدة اعمر","تماسين","المقارين","سيدي سليمان"],
+    "55 - تقرت": ["النزلة","تbسبست","تقرت","الزاوية العابدية","العالية","الحجيرة","بن ناصر","المنقر","الطيبات","bلدة اعمر","تماسين","المقارين","سيدي سليمان"],
     "56 - جانت": ["برج الحواس","جانت"],
     "57 - المغير": ["المغير","أم الطيور","سيدي خليل","سطيل","جامعة","المرارة","سيدي عمران","تندلة"],
-    "58 - المنيعة": ["المننيعة","حاسي القارة","حاسي الفحل"]
+    "58 - المنيعة": ["المنيعة","حاسي القارة","حاسي الفحل"]
   };
 
   const communeSelect = document.getElementById('o-commune');
